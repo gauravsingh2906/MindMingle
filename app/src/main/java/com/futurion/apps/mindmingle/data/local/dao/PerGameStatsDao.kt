@@ -5,6 +5,7 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import com.futurion.apps.mindmingle.data.local.entity.PerGameStatsEntity
+import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface PerGameStatsDao {

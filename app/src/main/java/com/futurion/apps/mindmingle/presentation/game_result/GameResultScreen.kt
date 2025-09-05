@@ -793,7 +793,7 @@ private fun formatTime(seconds: Int): String {
 
 
 @Composable
-private fun StatCard(
+fun StatCard(
     modifier: Modifier = Modifier,
     icon: Painter,
     iconColor: Color,
@@ -849,7 +849,7 @@ private fun StatCard(
 }
 
 @Composable
-private fun StatBadge(
+ private fun StatBadge(
     icon: ImageVector,
     iconColor: Color,
     value: String,

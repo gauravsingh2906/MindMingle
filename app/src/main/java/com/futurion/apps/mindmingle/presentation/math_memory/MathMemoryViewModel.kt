@@ -48,6 +48,13 @@ class MathMemoryViewModel @Inject constructor(
     private val _hintsUsed = MutableStateFlow(0)
     val hintsUsed: StateFlow<Int> = _hintsUsed
 
+    private val _totalXp = MutableStateFlow(0)
+    val totalXp: StateFlow<Int> = _totalXp
+
+    private val _totalCoins = MutableStateFlow(0)
+    val totalCoins: StateFlow<Int> = _totalCoins
+
+
     var selectedTheme by mutableStateOf(Default.first())
         private set
     var unlockedThemes by mutableStateOf(setOf(Default.first().name))
@@ -71,7 +78,10 @@ class MathMemoryViewModel @Inject constructor(
             val userId = statsRepo.initUserIfNeeded()
             val profile = statsRepo.getProfile(userId)
 
+            _totalXp.value = profile?.currentLevelXP ?: 0
+            _totalCoins.value = profile?.coins ?: 0
             // Get the theme name from profile selectedThemeName or fallback to default
+
 
             val savedLevel = profile?.mathMemoryCurrentLevel?.takeIf { it > 0 } ?: 1
             Log.d("MathMemoryVM", "Loading user progress for $userId, start level: $savedLevel")
@@ -307,6 +317,9 @@ class MathMemoryViewModel @Inject constructor(
             mathMemoryLevel = newCurrentLevel,
             mathMemoryHighestLevel = newHighestLevel
         )
+        val profile = statsRepo.getProfile(userId)
+        _totalXp.value = profile?.currentLevelXP ?: _totalXp.value
+        _totalCoins.value = profile?.coins ?: _totalCoins.value
         log("Game result updated for user $userId at level $levelNum")
     }
 

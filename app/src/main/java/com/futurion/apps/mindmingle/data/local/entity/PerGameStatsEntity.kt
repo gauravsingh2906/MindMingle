@@ -1,6 +1,7 @@
 package com.futurion.apps.mindmingle.data.local.entity
 
 import androidx.room.Entity
+import androidx.room.PrimaryKey
 
 @Entity(
     tableName = "per_game_statistics",

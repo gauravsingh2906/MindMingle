@@ -2,10 +2,13 @@ package com.futurion.apps.mindmingle.presentation.math_memory
 
 import android.annotation.SuppressLint
 import android.app.Activity
-import android.util.Log
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearOutSlowInEasing
 import androidx.compose.animation.core.animateIntAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -22,8 +25,10 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountBox
 import androidx.compose.material.icons.filled.Home
@@ -36,7 +41,10 @@ import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -54,6 +62,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -67,8 +76,16 @@ import com.futurion.apps.mindmingle.domain.model.AnswerOption
 import com.futurion.apps.mindmingle.domain.model.GameTheme
 import com.futurion.apps.mindmingle.domain.model.MemoryCard
 import com.futurion.apps.mindmingle.domain.model.Op
+import com.futurion.apps.mindmingle.presentation.game_result.StatCard
 import com.futurion.apps.mindmingle.presentation.games.SampleGames.Default
 import com.futurion.apps.mindmingle.presentation.profile.StatsViewModel
+import com.futurion.apps.mindmingle.presentation.utils.BebasNeueFont
+import com.futurion.apps.mindmingle.presentation.utils.FontSize
+import com.futurion.apps.mindmingle.presentation.utils.IconPrimary
+import com.futurion.apps.mindmingle.presentation.utils.Resources
+import com.futurion.apps.mindmingle.presentation.utils.Surface
+import com.futurion.apps.mindmingle.presentation.utils.TextPrimary
+import kotlinx.coroutines.delay
 
 
 @SuppressLint("StateFlowValueCalledInComposition")
@@ -77,10 +94,12 @@ fun MathMemoryScreen(
     viewModel: MathMemoryViewModel = hiltViewModel(),
     statsViewModel: StatsViewModel = hiltViewModel(),
     navigateToThemeUnlock: (String) -> Unit,
-    totalXp1: Int,
-    totalCoin: Int
+    navigateToGames: () -> Unit
 ) {
     val profile by statsViewModel.profile.collectAsState()
+
+    val totalXp by viewModel.totalXp.collectAsState()
+    val totalCoins by viewModel.totalCoins.collectAsState()
 
     val uiState by viewModel.uiState
     val answerOptions by viewModel.answerOptions
@@ -107,21 +126,8 @@ fun MathMemoryScreen(
     val themeName by remember { derivedStateOf { viewModel.newlyUnlockedThemeName } }
 
     LaunchedEffect(Unit) {
-        Log.d("OverTag", "userId: $userId")
         viewModel.loadOrInitMathMemoryLevel()
     }
-
-
-//    val animatedCoins by animateIntAsState(
-//        targetValue = totalCoins,
-//        animationSpec = tween(durationMillis = 800, easing = LinearOutSlowInEasing),
-//        label = "coinAnim"
-//    )
-//    val animatedXp by animateIntAsState(
-//        targetValue = totalXp,
-//        animationSpec = tween(durationMillis = 800, easing = LinearOutSlowInEasing),
-//        label = "xpAnim"
-//    )
 
     val gameLevel = uiState.game.level.number
     val showResult = uiState.game.showResult
@@ -135,195 +141,486 @@ fun MathMemoryScreen(
         else -> 0
     }
 
+    val context = LocalContext.current
+    val activity = context as? Activity
+    val googleAdManager = GoogleRewardedAdManager(context)
+    val adMobAdUnitId = "ca-app-pub-3940256099942544/5224354917"
+
     if (showResult && lastSavedLevel != gameLevel) {
         LaunchedEffect(gameLevel, showResult) {
-            Log.d("StatsUpdate", "Saving stats for level $gameLevel")
             viewModel.onLevelResultAndSaveStats(
                 userId = statsViewModel.userId.value ?: "123",
                 isCorrect = isCorrect,
                 hintsUsed = viewModel.hintsUsed.value,
                 timeSpentSeconds = 1,
                 coinsEarned = coinsEarned,
-                currentStreak =viewModel.currentStreak.value,
+                currentStreak = viewModel.currentStreak.value,
                 bestStreak = viewModel.bestStreak.value,
             )
             lastSavedLevel = gameLevel
         }
     }
 
-
-
-    val context = LocalContext.current
-    val activity = context as? Activity
-
-    val googleAdManager = remember { GoogleRewardedAdManager(context) }
-    val adMobAdUnitId = "ca-app-pub-3940256099942544/5224354917"
-
-    var showHint by remember { mutableStateOf(false) }
-
-    Box(modifier = Modifier.fillMaxSize()) {
-        Image(
-            painter = painterResource(theme.backgroundImage),
-            contentDescription = null,
-            contentScale = ContentScale.Crop,
-            modifier = Modifier.fillMaxSize()
-        )
-        Box(
-            Modifier
-                .fillMaxSize()
-                .background(Color.Black.copy(alpha = 0.44f))
-        )
-        Column(
-            Modifier
-                .fillMaxSize()
-                .padding(horizontal = 20.dp, vertical = 14.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            ThemeSelector(
-                builtInThemes = Default,
-                selectedTheme = theme,
-                unlockedNames = uiState.theme.unlockedThemes,
-                onSelect = { viewModel.onAction(MathMemoryAction.SelectTheme(it)) }
+    Scaffold(
+        containerColor = Surface
+    ) { it->
+        Box(modifier = Modifier.fillMaxSize().padding(it)) {
+            Image(
+                painter = painterResource(theme.backgroundImage),
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize()
             )
-
-            IconButton(
-                onClick = {
-                    navigateToThemeUnlock(userId)
-                }
+            Box(
+                Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.44f))
+            )
+            Column(
+                Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 20.dp, vertical = 14.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Icon(imageVector = Icons.Default.Home, contentDescription = "Unlock Theme")
-            }
+                ThemeSelector(
+                    builtInThemes = Default,
+                    selectedTheme = theme,
+                    unlockedNames = uiState.theme.unlockedThemes,
+                    onSelect = { viewModel.onAction(MathMemoryAction.SelectTheme(it)) }
+                )
+                IconButton(
+                    onClick = { navigateToThemeUnlock(userId) }
+                ) {
+                    Icon(imageVector = Icons.Default.Home, contentDescription = "Unlock Theme")
+                }
 
-//            Button(
-//                onClick = {
-//                    navigateToThemeUnlock(userId)
-//                },
-//            ) {
-//                Text("Unlock Theme")
-//            }
+                Spacer(Modifier.height(14.dp))
 
-            Spacer(Modifier.height(14.dp))
-            Text(
-                text = "Level ${uiState.game.level.number}",
-                style = MaterialTheme.typography.headlineSmall,
-                modifier = Modifier.padding(bottom = 10.dp),
-                color = if (phase == "RESULT" && isCorrect) Color(0xFF388E3C) else theme.textColor
-            )
-
-            when (phase) {
-                "MEMORIZE" -> Text(
-                    text = "👀 Memorize the moves! Start from:",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = theme.textColor,
-                    modifier = Modifier.padding(bottom = 10.dp)
+                Text(
+                    text = "Level ${uiState.game.level.number}",
+                    style = MaterialTheme.typography.headlineSmall,
+                    modifier = Modifier.padding(bottom = 10.dp),
+                    color = if (phase == "RESULT" && isCorrect) Color(0xFF388E3C) else theme.textColor
                 )
 
-                "SOLVE" -> Text(
-                    text = "Now solve: Start at the number below, do each step left-to-right (no BODMAS)!",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = theme.textColor,
-                    modifier = Modifier.padding(bottom = 10.dp)
+                when (phase) {
+                    "MEMORIZE" -> Text(
+                        text = "👀 Memorize the moves! Start from:",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = theme.textColor,
+                        modifier = Modifier.padding(bottom = 10.dp)
+                    )
+
+                    "SOLVE" -> Text(
+                        text = "Now solve: Start at the number below, do each step left-to-right (no BODMAS)!",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = theme.textColor,
+                        modifier = Modifier.padding(bottom = 10.dp)
+                    )
+
+                    else -> Unit
+                }
+
+                StartNumberBox(
+                    value = uiState.game.level.start,
+                    textColor = theme.buttonTextColor,
+                    bgColor = theme.buttonColor
                 )
-
-                else -> Unit
-            }
-
-            StartNumberBox(
-                value = uiState.game.level.start,
-                textColor = theme.buttonTextColor,
-                bgColor = theme.buttonColor
-            )
-            Spacer(Modifier.height(10.dp))
-
-            if (phase == "MEMORIZE") {
-                CardsRow(cards = uiState.game.level.cards, textColor = theme.textColor)
                 Spacer(Modifier.height(10.dp))
-                Text(
-                    "Try to remember all the moves and the start number!",
-                    color = Color.White,
-                    style = MaterialTheme.typography.bodySmall
-                )
-            }
 
-            if (phase == "SOLVE") {
-                Spacer(Modifier.height(16.dp))
-                AnswerOptionsColumn(
-                    options = answerOptions,
-                    onSelect = { selected ->
-                        viewModel.onAction(MathMemoryAction.InputChanged(selected.value.toString()))
-                        viewModel.onAction(MathMemoryAction.SubmitAnswer)
-                    },
-                    selectedTheme = theme
-                )
-                Spacer(Modifier.height(8.dp))
-                Text(
-                    text = "Tip: Start at ${uiState.game.level.start}, do every step one after another.",
-                    color = Color.White,
-                    style = MaterialTheme.typography.bodySmall
-                )
-                if (!secondChanceUsed) {
-                    Button(
-                        onClick = {
-                            googleAdManager.loadRewardedAd(adMobAdUnitId) { loaded ->
-                                if (loaded && activity != null) {
-                                    googleAdManager.showRewardedAd(
-                                        activity,
-                                        onUserEarnedReward = {
-                                            showHint = true
-                                            viewModel.onAction(MathMemoryAction.HideCards)
-                                            viewModel.useHint()
-                                        },
-                                        onClosed = {}
-                                    )
-                                }
-                            }
-                            secondChanceUsed = true
-                            showMemorizePhaseAgain = true
+                if (phase == "MEMORIZE") {
+                    CardsRow(cards = uiState.game.level.cards, textColor = theme.textColor)
+                    Spacer(Modifier.height(10.dp))
+                    Text(
+                        "Try to remember all the moves and the start number!",
+                        color = Color.White,
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+
+                if (phase == "SOLVE") {
+                    Spacer(Modifier.height(16.dp))
+                    AnswerOptionsColumn(
+                        options = answerOptions,
+                        onSelect = { selected ->
+                            viewModel.onAction(MathMemoryAction.InputChanged(selected.value.toString()))
+                            viewModel.onAction(MathMemoryAction.SubmitAnswer)
                         },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 12.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFD600))
-                    ) {
-                        Text("👁 Watch Ad to See Moves Again")
+                        selectedTheme = theme
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        text = "Tip: Start at ${uiState.game.level.start}, do every step one after another.",
+                        color = Color.White,
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                    if (!secondChanceUsed) {
+                        Button(
+                            onClick = {
+                                googleAdManager.loadRewardedAd(adMobAdUnitId) { loaded ->
+                                    if (loaded && activity != null) {
+                                        googleAdManager.showRewardedAd(
+                                            activity, onUserEarnedReward = {
+                                                viewModel.onAction(MathMemoryAction.HideCards)
+                                                viewModel.useHint()
+                                            }, onClosed = {}
+                                        )
+                                    }
+                                }
+
+                                secondChanceUsed = true
+                                showMemorizePhaseAgain = true
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 12.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFD600))
+                        ) {
+                            Text("👁 Watch Ad to See Moves Again")
+                        }
                     }
                 }
             }
 
             if (phase == "RESULT") {
-
-                Spacer(Modifier.height(10.dp))
-                ResultSection(
+                ResultFullScreen(
                     isCorrect = uiState.game.isCorrect,
-                    onNext = { viewModel.onAction(MathMemoryAction.NextLevel) },
-                    onRetry = { viewModel.onAction(MathMemoryAction.ResetGame) },
-                    textColor = theme.textColor,
-                    buttonColor = theme.buttonColor,
-                    buttonTextColor = theme.buttonTextColor,
+                    level = uiState.game.level.number,
+                    totalXp = totalXp,
+                    totalCoins = totalCoins,
+                    xpEarned = viewModel.getXpForLevel(uiState.game.level.number),
+                    coinsEarned = coinsEarned,
                     streak = viewModel.currentStreak.value,
                     bestStreak = viewModel.bestStreak.value,
-                    totalXp = profile?.currentLevelXP ?:9,
-                    totalCoin = profile?.coins ?:0,
-                    xp = viewModel.getXpForLevel(uiState.game.level.number),
-                    coins =coinsEarned,
+                    onNext = { viewModel.onAction(MathMemoryAction.NextLevel) },
+                    onRetry = { viewModel.onAction(MathMemoryAction.ResetGame) },
+                    navigateToGames = navigateToGames
+                )
+            }
+        }
+    }
+
+
+}
+
+@Composable
+fun ResultFullScreen(
+    isCorrect: Boolean,
+    level: Int,
+    totalXp: Int,
+    totalCoins: Int,
+    xpEarned: Int,
+    coinsEarned: Int,
+    streak: Int,
+    bestStreak: Int,
+    onNext: () -> Unit,
+    onRetry: () -> Unit,
+    navigateToGames: () -> Unit
+) {
+    var isVisible by remember { mutableStateOf(false) }
+
+
+    // Trigger entrance animation
+    LaunchedEffect(Unit) {
+        delay(300)
+        isVisible = true
+    }
+
+    Box(
+        Modifier
+            .fillMaxSize()
+            .background(Color(0xFF724DD3)),
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(24.dp)
+                .verticalScroll(rememberScrollState()),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+
+                IconButton(onClick = navigateToGames) {
+                    Icon(
+                        imageVector = Icons.Default.Home,
+                        contentDescription = "Unlock Theme"
+                    )
+                }
+
+                Spacer(modifier = Modifier.weight(1f))
+
+                val xpAnim by animateIntAsState(
+                    targetValue = totalXp,
+                    animationSpec = tween(700)
                 )
 
+                StatBadge(
+                    icon = Icons.Default.Star,
+                    iconColor = Color(0xFFFFD700),
+                    value = xpAnim.toString(),
+                    label = "XP"
+                )
+
+                Spacer(modifier = Modifier.width(12.dp))
+
+                val coinsAnim by animateIntAsState(
+                    targetValue = totalCoins,
+                    animationSpec = tween(700)
+                )
+
+                // Total Coins
+                StatBadge(
+                    icon = Icons.Default.AccountBox,
+                    iconColor = Color(0xFFFF9800),
+                    value = coinsAnim.toString(),
+                    label = "Coins"
+                )
+
+//                Column {
+//                    Text(
+//                        "XP",
+//                        fontSize = 16.sp,
+//                        color = Color(0xFFFFD700),
+//                        fontWeight = FontWeight.Bold
+//                    )
+//                    val xpAnim by animateIntAsState(
+//                        targetValue = totalXp,
+//                        animationSpec = tween(700)
+//                    )
+//                    Text(
+//                        xpAnim.toString(),
+//                        fontSize = 42.sp,
+//                        color = Color(0xFFFFD700),
+//                        fontWeight = FontWeight.ExtraBold
+//                    )
+//                }
+//                Column {
+//                    Text(
+//                        "Coins",
+//                        fontSize = 16.sp,
+//                        color = Color(0xFFFF9800),
+//                        fontWeight = FontWeight.Bold
+//                    )
+//                    val coinsAnim by animateIntAsState(
+//                        targetValue = totalCoins,
+//                        animationSpec = tween(700)
+//                    )
+//                    Text(
+//                        coinsAnim.toString(),
+//                        fontSize = 42.sp,
+//                        color = Color(0xFFFF9800),
+//                        fontWeight = FontWeight.ExtraBold
+//                    )
+//                }
             }
 
-            if (phase == "RESULT") {
-                LaunchedEffect(isCorrect) {
-//                    navigateToMemoryResult(
-//                        viewModel = viewModel,
-//                        statsViewModel = statsViewModel,
-//                        isCorrect = isCorrect,
-//                        currentLevel = gameLevel,
-//                        onNavigateToResult = onNavigateToResult,
-//                    )
+            Spacer(modifier = Modifier.height(25.dp))
+
+            AnimatedVisibility(
+                visible = isVisible,
+                enter = slideInVertically(
+                    initialOffsetY = { -it },
+                    animationSpec = tween(800, easing = FastOutSlowInEasing)
+                ) + fadeIn(tween(800))
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    // Trophy Icon
+                    Box(
+                        modifier = Modifier
+                            .size(80.dp)
+                            .background(
+                                Color.White.copy(alpha = 0.15f),
+                                CircleShape
+                            )
+                            .border(
+                                2.dp,
+                                Color.White.copy(alpha = 0.3f),
+                                CircleShape
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            painter = if (isCorrect) painterResource(R.drawable.book) else painterResource(
+                                R.drawable.weight
+                            ),
+                            contentDescription = "Trophy",
+                            tint = if (isCorrect) Color(0xFFFFD700) else Color(
+                                0xFFFF5252
+                            ),
+                            modifier = Modifier.size(40.dp)
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    Text(
+                        text = if (isCorrect) "\uD83C\uDF89 Correct!" else "Better Luck Next Time",
+                        textAlign = TextAlign.Center,
+                        fontSize = 32.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White,
+                        letterSpacing = 2.sp
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    Text(
+                        text = if (isCorrect) "LEVEL $level COMPLETED" else "",
+                        fontSize = 22.sp,
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 1.5.sp
+                    )
                 }
+            }
+
+            Spacer(modifier = Modifier.height(40.dp))
+
+            AnimatedVisibility(
+                visible = isVisible,
+                enter = slideInVertically(
+                    initialOffsetY = { it },
+                    animationSpec = tween(1000, delayMillis = 400)
+                ) + fadeIn(tween(1000, delayMillis = 400))
+            ) {
+                Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                    // XP and Coins Row
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(16.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        StatCard(
+                            modifier = Modifier.weight(1f),
+                            icon = painterResource(R.drawable.close),
+                            iconColor = Color(0xFFFFD700),
+                            title = "XP EARNED",
+                            value = "+${xpEarned}",
+                            subtitle = "This Level"
+                        )
+
+                        StatCard(
+                            modifier = Modifier.weight(1f),
+                            icon = painterResource(R.drawable.book),
+                            iconColor = Color(0xFFFF9800),
+                            title = "COINS EARNED",
+                            value = "+${coinsEarned}",
+                            subtitle = "This Level"
+                        )
+                    }
+
+                    StatCard(
+                        modifier = Modifier.fillMaxWidth(),
+                        icon = painterResource(R.drawable.grid),
+                        iconColor = Color(0xFFFF5722),
+                        title = "STREAK POWER",
+                        value = "${streak} / ${bestStreak}",
+                        subtitle = "Current / Best Streak"
+                    )
+
+                }
+            }
+
+//            Text(
+//                text = if (isCorrect) "\uD83C\uDF89 Correct!" else "Better Luck Next Time",
+//                fontSize = 34.sp,
+//                fontWeight = FontWeight.ExtraBold,
+//                color = if (isCorrect) Color(0xFF34B233) else Color.White
+//            )
+//
+//            Spacer(modifier = Modifier.height(12.dp))
+//
+//            Text(
+//                "LEVEL $level",
+//                fontSize = 22.sp,
+//                color = Color.White,
+//                fontWeight = FontWeight.Bold,
+//                letterSpacing = 1.5.sp
+//            )
+
+
+            Spacer(modifier = Modifier.height(40.dp))
+
+
+            Button(
+                onClick = if (isCorrect) onNext else onRetry,
+                shape = RoundedCornerShape(36.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(56.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = Color.White)
+            ) {
+                Text(
+                    if (isCorrect) "Next Level" else "Restart",
+                    fontSize = 18.sp,
+                    color = Color.Black,
+                    fontWeight = FontWeight.Bold
+                )
             }
         }
     }
 }
+
+@Composable
+fun StatChip(label: String, value: Int) {
+    ElevatedCard(
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(defaultElevation = 3.dp),
+        modifier = Modifier.size(width = 110.dp, height = 60.dp)
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Text(
+                label,
+                fontSize = 14.sp,
+                color = Color(0xFF6246D6),
+                fontWeight = FontWeight.SemiBold
+            )
+            Text(
+                value.toString(),
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color.Black
+            )
+        }
+    }
+}
+
+
+@Composable
+fun AnimatedStatCounter(
+    value: Int,
+    label: String,
+    color: Color = Color(0xFFFFD700)
+) {
+    val animatedValue by animateIntAsState(
+        targetValue = value,
+        animationSpec = tween(durationMillis = 800, easing = LinearOutSlowInEasing)
+    )
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(
+            text = label,
+            color = Color.Gray,
+            fontWeight = FontWeight.Bold,
+            fontSize = 14.sp
+        )
+        Text(
+            text = animatedValue.toString(),
+            color = color,
+            fontWeight = FontWeight.Bold,
+            fontSize = 32.sp
+        )
+    }
+}
+
+// Keep your StatChip composable from your current code unchanged
+
 
 // The following can be outside or in separate file ----------------------------------
 @Composable
@@ -377,39 +674,18 @@ private fun StatBadge(
                 text = value,
                 fontSize = 14.sp,
                 fontWeight = FontWeight.Bold,
-                color = Color.Black
+                color = Color.White
             )
 
             Text(
                 text = label,
                 fontSize = 10.sp,
                 fontWeight = FontWeight.Medium,
-                color = Color.Black.copy(alpha = 0.8f)
+                color = Color.White.copy(alpha = 0.8f)
             )
         }
     }
 }
-
-
-
-//@Composable
-//fun StatChip(icon: String, label: String, value: String) {
-//    Surface(
-//        shape = RoundedCornerShape(50),
-//        color = Color.White.copy(alpha = 0.2f),
-//        tonalElevation = 4.dp,
-//        shadowElevation = 6.dp
-//    ) {
-//        Row(
-//            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-//            verticalAlignment = Alignment.CenterVertically
-//        ) {
-//            Text(icon, fontSize = 16.sp)
-//            Spacer(Modifier.width(4.dp))
-//            Text("$label: $value", fontSize = 14.sp, color = Color.White)
-//        }
-//    }
-//}
 
 
 @Composable
@@ -428,20 +704,20 @@ fun StartNumberBox(value: Int, textColor: Color, bgColor: Color) {
     }
 }
 
-@Composable
-fun StatChip(label: String, value: Int) {
-    ElevatedCard(
-        shape = RoundedCornerShape(14.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-        modifier = Modifier.size(width = 70.dp, height = 42.dp)
-    ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-            Text(label, style = MaterialTheme.typography.labelSmall, color = Color.Gray)
-            Text(value.toString(), style = MaterialTheme.typography.titleMedium, color = Color.Black)
-        }
-    }
-}
+//@Composable
+//fun StatChip(label: String, value: Int) {
+//    ElevatedCard(
+//        shape = RoundedCornerShape(14.dp),
+//        colors = CardDefaults.cardColors(containerColor = Color.White),
+//        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+//        modifier = Modifier.size(width = 70.dp, height = 42.dp)
+//    ) {
+//        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+//            Text(label, style = MaterialTheme.typography.labelSmall, color = Color.Gray)
+//            Text(value.toString(), style = MaterialTheme.typography.titleMedium, color = Color.Black)
+//        }
+//    }
+//}
 
 @Composable
 fun CardsRow(cards: List<MemoryCard>, textColor: Color) {
@@ -509,6 +785,33 @@ fun AnswerOptionsColumn(
     }
 }
 
+//@Composable
+//fun AnimatedStatCounter(
+//    value: Int,
+//    label: String,
+//    color: Color = Color(0xFFFFD700)
+//) {
+//    val animatedValue by animateIntAsState(
+//        targetValue = value,
+//        animationSpec = tween(durationMillis = 800, easing = LinearOutSlowInEasing)
+//    )
+//    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+//        Text(
+//            text = label,
+//            color = Color.Gray,
+//            fontWeight = FontWeight.Bold,
+//            fontSize = 14.sp
+//        )
+//        Text(
+//            text = animatedValue.toString(),
+//            color = color,
+//            fontWeight = FontWeight.Bold,
+//            fontSize = 32.sp
+//        )
+//    }
+//}
+
+
 @Composable
 fun ResultSection(
     isCorrect: Boolean,
@@ -526,8 +829,13 @@ fun ResultSection(
 ) {
     val color = if (isCorrect) Color(0xFF4CAF50) else Color(0xFFD32F2F)
     val message = if (isCorrect) "🎉 Correct!" else "Try Again!"
+
+
+
     Column(
-        modifier = Modifier.fillMaxSize().background(Color.White),
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.White),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
@@ -539,22 +847,10 @@ fun ResultSection(
             verticalAlignment = Alignment.CenterVertically
         ) {
             // Total XP
-            StatBadge(
-                icon = Icons.Default.Star,
-                iconColor = Color(0xFFFFD700),
-                value = totalXp.toString(),
-                label = "XP"
-            )
-
+            AnimatedStatCounter(value = totalXp, label = "XP", color = Color(0xFFFFD700))
             Spacer(modifier = Modifier.width(12.dp))
+            AnimatedStatCounter(value = totalCoin, label = "Coins", color = Color(0xFFFF9800))
 
-            // Total Coins
-            StatBadge(
-                icon = Icons.Default.AccountBox,
-                iconColor = Color(0xFFFF9800),
-                value = totalCoin.toString(),
-                label = "Coins"
-            )
         }
         Text(
             text = message,
@@ -648,9 +944,6 @@ fun SimpleLottieRawAnimation(rawRes: Int, modifier: Modifier = Modifier) {
         composition = composition,
     )
 }
-
-
-
 
 
 @Composable

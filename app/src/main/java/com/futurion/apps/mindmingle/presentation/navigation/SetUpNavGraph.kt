@@ -290,8 +290,9 @@ fun SetUpNavGraph(
                 navigateToThemeUnlock = {
                     navController.navigate(Screen.ThemeSelectionScreen(it))
                 },
-                totalXp1 = statsViewModel.profile.value?.currentLevelXP ?:1,
-                totalCoin = statsViewModel.profile.value?.coins ?:1,
+                navigateToGames = {
+                    navController.navigateUp()
+                }
             )
 //            MathMemoryScreenV2(
 //                startValue = 7,
