@@ -7,6 +7,56 @@ import com.futurion.apps.mindmingle.domain.model.GameTheme
 
 object SampleGames {
 
+    val gameItems = listOf(
+        GameGridItem(
+            name = "Sudoku",
+            description = "Sharpen your mind with logic puzzles",
+            imageResId = R.drawable.figma_sudoku,
+            cardColor = Color(0xFF56CCF2), // Light Blue
+            xp = 1200,
+            coins = 500,
+            id = "sudoku"
+        ),
+        GameGridItem(
+            name = "Math Memory",
+            description = "Boost your memory and math skills",
+            imageResId = R.drawable.fourthone,
+            cardColor = Color(0xFF6A0572), // Purple
+            xp = 1500,
+            coins = 700,
+            id = "math_memory",
+        ),
+        GameGridItem(
+            name = "Algebra Quest",
+            description = "Master algebra through fun challenges",
+            imageResId = R.drawable.fourthone,
+            cardColor = Color(0xFFEF476F), // Pinkish Red
+            xp = 900,
+            coins = 400,
+            id = "algebra",
+        ),
+        GameGridItem(
+            name = "New Game 1",
+            description = "Coming soon",
+            imageResId = R.drawable.fourthone,
+            cardColor = Color.Black,
+            xp = 0,
+            coins = 0,
+            isComingSoon = true,
+            id = "4"
+        ),
+        GameGridItem(
+            name = "New Game 2",
+            description = "Coming soon",
+            imageResId = R.drawable.fourthone,
+            cardColor = Color.Black,
+            xp = 0,
+            coins = 0,
+            isComingSoon = true,
+            id = "5"
+        )
+    )
+
     val sampleGames = listOf(
         GameItem(
             id = "sudoku",

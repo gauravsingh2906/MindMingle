@@ -2,15 +2,14 @@ package com.futurion.apps.mindmingle.data.repository
 
 import com.futurion.apps.mindmingle.data.local.dao.LevelProgressDao
 import com.futurion.apps.mindmingle.data.local.entity.LevelProgressEntity
-import com.futurion.apps.mindmingle.domain.repository.LevelRepository1
+import com.futurion.apps.mindmingle.domain.repository.LevelRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
-import kotlin.text.insert
 
 class LevelRepositoryImpl(
     private val dao: LevelProgressDao
-): LevelRepository1 {
-    override suspend fun getMaxUnlockedLevelOnce(gameId: String): Flow<Int> {
+): LevelRepository {
+    override fun getMaxUnlockedLevelOnce(gameId: String): Flow<Int> {
        return dao.getMaxUnlockedLevel(gameId).map { it ?: 1 }
     }
 

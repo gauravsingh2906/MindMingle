@@ -10,16 +10,18 @@ import com.futurion.apps.mindmingle.data.local.dao.LevelProgressDao
 import com.futurion.apps.mindmingle.data.local.dao.OverallProfileDao
 import com.futurion.apps.mindmingle.data.local.dao.PerGameStatsDao
 import com.futurion.apps.mindmingle.data.local.dao.SudokuGameDao
+import com.futurion.apps.mindmingle.data.local.dao.SudokuResultDao
 import com.futurion.apps.mindmingle.data.local.dao.ThemeUnlockDao
 import com.futurion.apps.mindmingle.data.local.entity.LevelProgressEntity
 import com.futurion.apps.mindmingle.data.local.entity.OverallProfileEntity
 import com.futurion.apps.mindmingle.data.local.entity.PerGameStatsEntity
 import com.futurion.apps.mindmingle.data.local.entity.SavedSudokuGameEntity
+import com.futurion.apps.mindmingle.data.local.entity.SudokuResultEntity
 import com.futurion.apps.mindmingle.data.local.entity.ThemeUnlockEntity
 
 @Database(
-    entities = [ThemeUnlockEntity::class, OverallProfileEntity::class, PerGameStatsEntity::class, LevelProgressEntity::class, SavedSudokuGameEntity::class],
-    version = 1,
+    entities = [OverallProfileEntity::class, PerGameStatsEntity::class, LevelProgressEntity::class, SavedSudokuGameEntity::class, SudokuResultEntity::class],
+    version = 3,
     exportSchema = false
 )
 @TypeConverters(IntListConverter::class, StringListConverter::class, Converters::class)
@@ -31,9 +33,11 @@ abstract class AppDatabase : RoomDatabase() {
 
     abstract fun levelProgressDao(): LevelProgressDao
 
+    abstract fun sudokuResultDao(): SudokuResultDao
+
  //   abstract fun dailyMissionDao(): DailyMissionDao
 
-    abstract fun themeUnlockDao(): ThemeUnlockDao
+//    abstract fun themeUnlockDao(): ThemeUnlockDao
 
     abstract fun sudokuGameDao(): SudokuGameDao
 

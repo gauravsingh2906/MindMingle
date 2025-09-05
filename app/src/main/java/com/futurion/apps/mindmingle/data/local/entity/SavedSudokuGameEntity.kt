@@ -23,7 +23,7 @@ data class SavedSudokuGameEntity(
     val isTimerRunning: Boolean,
     val difficultyOrdinal: Int?
 )
-
+// to resume the game
 
 
 

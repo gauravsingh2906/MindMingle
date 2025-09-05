@@ -16,7 +16,7 @@ enum class BottomBarDestination(
     ),
     Games(
         icon = Resources.Icon.ShoppingCart,
-        title = "Games",
+        title = "Mind Mingle",
         screen = Screen.Games
     ),
     Profile(

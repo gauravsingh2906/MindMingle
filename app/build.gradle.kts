@@ -69,7 +69,7 @@ dependencies {
     implementation(libs.coil.compose)
 
     // Room
- //   ksp(libs.androidx.room.compiler)
+    ksp(libs.androidx.room.compiler)
     implementation(libs.androidx.room.runtime)
     implementation(libs.androidx.room.ktx)
     implementation(libs.androidx.room.paging)
@@ -96,4 +96,7 @@ dependencies {
 
     implementation(libs.messagebar.kmp)
 
+    implementation("com.airbnb.android:lottie-compose:6.6.7")
+    implementation("com.facebook.android:audience-network-sdk:6.14.0")
+    implementation("com.google.android.gms:play-services-ads:23.0.0")
 }

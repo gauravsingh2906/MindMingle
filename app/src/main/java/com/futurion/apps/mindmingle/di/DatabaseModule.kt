@@ -7,12 +7,14 @@ import com.futurion.apps.mindmingle.data.local.dao.LevelProgressDao
 import com.futurion.apps.mindmingle.data.local.dao.OverallProfileDao
 import com.futurion.apps.mindmingle.data.local.dao.PerGameStatsDao
 import com.futurion.apps.mindmingle.data.local.dao.SudokuGameDao
-import com.futurion.apps.mindmingle.data.local.dao.ThemeUnlockDao
+import com.futurion.apps.mindmingle.data.local.dao.SudokuResultDao
 import com.futurion.apps.mindmingle.data.repository.GameResultRepositoryImpl
 import com.futurion.apps.mindmingle.data.repository.LevelRepositoryImpl
 import com.futurion.apps.mindmingle.data.repository.StatsRepositoryImpl
+import com.futurion.apps.mindmingle.domain.LevelManager
+import com.futurion.apps.mindmingle.domain.model.generateMemoryLevel
 import com.futurion.apps.mindmingle.domain.repository.GameResultRepository
-import com.futurion.apps.mindmingle.domain.repository.LevelRepository1
+import com.futurion.apps.mindmingle.domain.repository.LevelRepository
 import com.futurion.apps.mindmingle.domain.repository.StatsRepository
 import dagger.Module
 import dagger.Provides
@@ -36,6 +38,11 @@ object DatabaseModule {
     }
 
     @Provides
+    fun provideLevelManager(): LevelManager =
+        LevelManager(::generateMemoryLevel)
+
+
+    @Provides
     fun providePerGameStatsDao(db: AppDatabase): PerGameStatsDao = db.perGameStatsDao()
 
     @Provides
@@ -57,6 +64,13 @@ object DatabaseModule {
         return GameResultRepositoryImpl(perGameStatsDao, overallProfileDao)
     }
 
+  //  @Provides
+  //  fun provideSudokuResultDao(db: AppDatabase): SudokuResultDao = db.sudokuResultDao()
+
+    @Provides
+    fun provideSudokuResultDao(database: AppDatabase): SudokuResultDao {
+        return database.sudokuResultDao()
+    }
 
     @Provides
     fun provideSudokuGameDao(db: AppDatabase): SudokuGameDao = db.sudokuGameDao()
@@ -68,11 +82,11 @@ object DatabaseModule {
     @Singleton
     fun provideLevelProgressRepository(
         levelProgressDao: LevelProgressDao
-    ): LevelRepository1 = LevelRepositoryImpl(levelProgressDao)
+    ): LevelRepository = LevelRepositoryImpl(levelProgressDao)
 
-    @Provides
-    fun provideThemeUnlockDao(database: AppDatabase): ThemeUnlockDao {
-        return database.themeUnlockDao()
-    }
+//    @Provides
+//    fun provideThemeUnlockDao(database: AppDatabase): ThemeUnlockDao {
+//        return database.themeUnlockDao()
+//    }
 
 }

@@ -2,9 +2,9 @@ package com.futurion.apps.mindmingle.domain.repository
 
 import kotlinx.coroutines.flow.Flow
 
-interface LevelRepository1 {
+interface LevelRepository {
 
-    suspend fun getMaxUnlockedLevelOnce(gameId: String): Flow<Int>
+     fun getMaxUnlockedLevelOnce(gameId: String): Flow<Int>
 
     suspend fun unlockNextLevelIfNeeded(currentLevel: Int,gameId: String)
 
