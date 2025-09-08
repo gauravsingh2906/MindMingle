@@ -2,6 +2,7 @@ package com.futurion.apps.mindmingle.presentation.profile
 
 import android.app.Activity
 import android.util.Log
+import android.widget.Toast
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -56,18 +57,18 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.rememberAsyncImagePainter
+import com.futurion.apps.mindmingle.GoogleRewardedAdManager
 import com.futurion.apps.mindmingle.R
-import com.futurion.apps.mindmingle.RewardedAdManager
 import com.futurion.apps.mindmingle.data.local.entity.OverallProfileEntity
 import com.futurion.apps.mindmingle.data.local.entity.PerGameStatsEntity
+import com.futurion.apps.mindmingle.presentation.utils.Constants
 
 
 @Composable
 fun ProfileScreen(
     statsViewModel: StatsViewModel = hiltViewModel(),
     profile: OverallProfileEntity,
-    perGameStats: List<PerGameStatsEntity> = emptyList(),
-
+    perGameStats: List<PerGameStatsEntity> = emptyList()
 ) {
     var showAvatarDialog by remember { mutableStateOf(false) }
     var showUsernameDialog by remember { mutableStateOf(false) }
@@ -75,7 +76,7 @@ fun ProfileScreen(
     val context = LocalContext.current
     val activity = context as Activity
     val rewardedAdManager = remember {
-        RewardedAdManager(context, "ca-app-pub-3940256099942544/5224354917")
+        GoogleRewardedAdManager(context, Constants.AD_Unit)
     }
 
 //    SideEffect {
@@ -89,7 +90,7 @@ fun ProfileScreen(
     if (showAvatarDialog) {
         AvatarUnlockDialog(
             unlockedAvatars = profile.unlockedAvatars,
-            userLevel = profile.overallHighestLevel,
+            userLevel = profile.finalLevel,
             userCoins = profile.coins,
             onDismiss = { showAvatarDialog = false },
             onUnlockRequested = { avatarId ->
@@ -216,12 +217,18 @@ fun ProfileScreen(
 
         Spacer(Modifier.height(20.dp))
 
+//        val win = (profile.totalWins/profile.totalGamesPlayed).toFloat()
+//        Log.d("MathStats", "Win: $win")
+
         // Overall stats
         SectionCard(title = "Overall Stats") {
             StatsRow("Total Games", profile.totalGamesPlayed)
             StatsRow("Total Wins 🏆", profile.totalWins)
             StatsRow("Total Losses ❌", profile.totalLosses)
             StatsRow("Total XP ", profile.totalXP)
+        //    Text("Win %: ${win*100}")
+       //     Text(text = "is:31.32")
+        //    Text("Win %: ${(profile.totalWins/profile.totalGamesPlayed)*100}")
             StatsRow("Highest Level 📈", profile.overallHighestLevel)
             StatsRow("Total Hints Used 💡", profile.totalHintsUsed)
             StatsRow("Time ⏱", "${profile.totalTimeSeconds / 60} min")
@@ -265,6 +272,7 @@ fun ProfileScreen(
                             ) {
                                 Text("Losses: ${gameStats.losses}")
                                 Text("Hints: ${gameStats.totalHintsUsed}")
+                                Text("Win %: ${(gameStats.wins/gameStats.gamesPlayed)*100}")
                                 Text("Time: ${gameStats.totalTimeSeconds / 60} min")
                             }
                         }
@@ -282,7 +290,7 @@ fun UsernameChangeDialog(
     onDismiss: () -> Unit,
     onSubmit: (String) -> Unit,
     onUnlockSpecial: (String) -> Unit,
-    rewardedAdManager: RewardedAdManager,
+    rewardedAdManager: GoogleRewardedAdManager,
     activity: Activity
 ) {
     var text by remember { mutableStateOf(currentUsername) }
@@ -383,17 +391,19 @@ fun AvatarUnlockDialog(
     onUnlockRequested: (Int) -> Unit,
     onAvatarSelected: (Int) -> Unit,
     onNeedCoins: () -> Unit,
-    rewardedAdManager: RewardedAdManager,
+    rewardedAdManager: GoogleRewardedAdManager,
     activity: Activity
 ) {
     val avatarList = listOf(
         R.drawable.avatar_1 to UnlockCondition.AlwaysUnlocked,
         R.drawable.avatar_2 to UnlockCondition.Level(5),
-        R.drawable.avatar_4 to UnlockCondition.Coins(500),
-        R.drawable.avatar_5 to UnlockCondition.Coins(500),
+        R.drawable.avatar_4 to UnlockCondition.Coins(1500),
+        R.drawable.avatar_5 to UnlockCondition.Coins(3000),
         R.drawable.avatar_6 to UnlockCondition.Level(10),
         R.drawable.avatar_7 to UnlockCondition.Level(15)
     )
+
+    val context = LocalContext.current
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -487,14 +497,17 @@ fun AvatarUnlockDialog(
                                     } else {
                                         TextButton(
                                             onClick = {
-                                                rewardedAdManager.showAd(
-                                                    activity,
-                                                    onUserEarnedReward = {
-                                                        onNeedCoins()
-                                                    },
-                                                    onAdDismissed = {
-                                                        rewardedAdManager.loadAd()
-                                                    })
+                                                if (activity != null) {
+                                                    rewardedAdManager.showRewardedAd(
+                                                        activity,
+                                                        onUserEarnedReward = {
+                                                            onNeedCoins()
+                                                        },
+                                                        onClosed = {
+                                                            Toast.makeText(context, "Ad not ready, please try again.", Toast.LENGTH_SHORT).show()
+                                                        }
+                                                    )
+                                                }
                                             }
                                         ) {
                                             Text("Get Coins")

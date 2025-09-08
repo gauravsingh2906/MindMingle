@@ -1,13 +1,16 @@
 package com.futurion.apps.mindmingle.presentation.game_result
 
 import android.os.Build
+import androidx.activity.compose.BackHandler
 import androidx.annotation.RequiresApi
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import com.futurion.apps.mindmingle.R
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -28,6 +31,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -40,7 +44,6 @@ import com.futurion.apps.mindmingle.presentation.math_memory.MathMemoryViewModel
 import kotlinx.coroutines.delay
 import kotlin.math.cos
 import kotlin.math.sin
-
 
 
 @RequiresApi(Build.VERSION_CODES.VANILLA_ICE_CREAM)
@@ -56,11 +59,21 @@ fun GameResultScreen(
     onReplay: (Int, String) -> Unit = { _, _ -> },
     onNext: (Int, String) -> Unit = { _, _ -> },
     onHome: () -> Unit = {},
+    navigateToGameDetail: (String) -> Unit,
     navigateToMathMemory: (Int) -> Unit,
 ) {
     var isVisible by remember { mutableStateOf(false) }
 
+    val gameTypeq = when (gameType) {
+        AllGames.ALGEBRA -> "algebra"
+        AllGames.SUDOKU -> "sudoku"
+        AllGames.MEMORY -> "math_memory"
+    }
 
+
+    BackHandler {
+        navigateToGameDetail(gameTypeq)
+    }
 
 
     // Trigger entrance animation
@@ -104,6 +117,8 @@ fun GameResultScreen(
                     endY = Float.POSITIVE_INFINITY
                 )
             )
+            .systemBarsPadding()
+            .navigationBarsPadding()
 
     ) {
 
@@ -113,7 +128,7 @@ fun GameResultScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(24.dp)
+                .padding(horizontal = 24.dp)
                 .verticalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
@@ -122,12 +137,31 @@ fun GameResultScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(vertical = 8.dp),
-                horizontalArrangement = Arrangement.End,
                 verticalAlignment = Alignment.CenterVertically
             ) {
+
+                Box(
+                    Modifier
+                        .clickable(onClick = onHome)
+                        .background(
+                            shape = CircleShape,
+                            color = Color.White
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    IconButton(onClick = onHome) {
+                        Icon(
+                            imageVector = Icons.Default.Home,
+                            contentDescription = "Unlock Theme"
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.weight(1f))
+
                 // Total XP
                 StatBadge(
-                    icon = Icons.Default.Star,
+                    icon = painterResource(R.drawable.xp_figma),
                     iconColor = Color(0xFFFFD700),
                     value = data.xpEarned.toString(),
                     label = "XP"
@@ -137,7 +171,7 @@ fun GameResultScreen(
 
                 // Total Coins
                 StatBadge(
-                    icon = Icons.Default.AccountBox,
+                    icon = painterResource(R.drawable.figma_coin),
                     iconColor = Color(0xFFFF9800),
                     value = data.coinsEarned.toString(),
                     label = "Coins"
@@ -170,15 +204,13 @@ fun GameResultScreen(
                             ),
                         contentAlignment = Alignment.Center
                     ) {
-                        Icon(
-                            painter = if (data.isMatchWon == true) painterResource(R.drawable.book) else painterResource(
+
+
+                        Image(
+                            painter = if (data.isMatchWon == true) painterResource(R.drawable.figma_trophy) else painterResource(
                                 R.drawable.weight
                             ),
                             contentDescription = "Trophy",
-                            tint = if (data.won == true) Color(0xFFFFD700) else Color(
-                                0xFFFF5252
-                            ),
-                            modifier = Modifier.size(40.dp)
                         )
                     }
 
@@ -193,11 +225,20 @@ fun GameResultScreen(
                         letterSpacing = 2.sp
                     )
 
+//                    Text(
+//                        text = data.resultMessage,
+//                        textAlign = TextAlign.Center,
+//                        fontSize = 32.sp,
+//                        fontWeight = FontWeight.Bold,
+//                        color = Color.White,
+//                        letterSpacing = 2.sp
+//                    )
+
                     Text(
                         text = when (gameType) {
-                            AllGames.ALGEBRA -> if (data.isMatchWon == true) "LEVEL $currentLevel COMPLETED" else "LEVEL $currentLevel"
-                            AllGames.SUDOKU -> "${currentDifficulty.uppercase()} SUDOKU ${if (data.won == true) "COMPLETED" else ""}"
-                            AllGames.MEMORY  -> if (data.isMatchWon == true) "LEVEL $currentLevel COMPLETED" else "LEVEL $currentLevel"
+                            AllGames.ALGEBRA -> if (data.isMatchWon == true) "LEVEL $currentLevel COMPLETED" else "Better Luck Next Time!"
+                            AllGames.SUDOKU -> "${currentDifficulty.uppercase()} SUDOKU ${if (data.won == true) "COMPLETED" else "Better Luck Next Time!"}"
+                            AllGames.MEMORY -> if (data.isMatchWon == true) "LEVEL $currentLevel COMPLETED" else "Better Luck Next Time!"
                         },
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Medium,
@@ -372,7 +413,7 @@ private fun AlgebraStatsSection(data: UniversalResult) {
         ) {
             StatCard(
                 modifier = Modifier.weight(1f),
-                icon = painterResource(R.drawable.close),
+                icon = painterResource(R.drawable.xp_figma),
                 iconColor = Color(0xFFFFD700),
                 title = "XP EARNED",
                 value = "+${data.eachGameXp}",
@@ -381,10 +422,10 @@ private fun AlgebraStatsSection(data: UniversalResult) {
 
             StatCard(
                 modifier = Modifier.weight(1f),
-                icon = painterResource(R.drawable.delete),
+                icon = painterResource(R.drawable.figma_coin),
                 iconColor = Color(0xFFFF9800),
                 title = "COINS EARNED",
-                value = "+${data.eachGameCoin}",
+                value = "+${data.eachGameCoin}", // changed
                 subtitle = "This Level"
             )
         }
@@ -392,7 +433,7 @@ private fun AlgebraStatsSection(data: UniversalResult) {
         // Streak Card
         StatCard(
             modifier = Modifier.fillMaxWidth(),
-            icon = painterResource(R.drawable.grid),
+            icon = painterResource(R.drawable.fire_icon),
             iconColor = Color(0xFFFF5722),
             title = "STREAK POWER",
             value = "${data.currentStreak} / ${data.bestStreak}",
@@ -411,7 +452,7 @@ private fun SudokuStatsSection(data: UniversalResult, difficulty: String) {
         ) {
             StatCard(
                 modifier = Modifier.weight(1f),
-                icon = painterResource(R.drawable.close),
+                icon = painterResource(R.drawable.xp_figma),
                 iconColor = Color(0xFFFFD700),
                 title = "XP EARNED",
                 value = "+${data.eachGameXp}",
@@ -420,10 +461,10 @@ private fun SudokuStatsSection(data: UniversalResult, difficulty: String) {
 
             StatCard(
                 modifier = Modifier.weight(1f),
-                icon = painterResource(R.drawable.weight),
+                icon = painterResource(R.drawable.figma_coin),
                 iconColor = Color(0xFFFF9800),
                 title = "COINS EARNED",
-                value = "+${data.eachGameCoin}",
+                value = "+${data.coinsEarned}",
                 subtitle = "This Game"
             )
         }
@@ -431,7 +472,7 @@ private fun SudokuStatsSection(data: UniversalResult, difficulty: String) {
         // Streak Card
         StatCard(
             modifier = Modifier.fillMaxWidth(),
-            icon = painterResource(R.drawable.delete),
+            icon = painterResource(R.drawable.fire_icon),
             iconColor = Color(0xFFFF5722),
             title = "STREAK POWER",
             value = "${data.currentStreak} / ${data.bestStreak}",
@@ -445,7 +486,7 @@ private fun SudokuStatsSection(data: UniversalResult, difficulty: String) {
         ) {
             StatCard(
                 modifier = Modifier.weight(1f),
-                icon = painterResource(R.drawable.delete),
+                icon = painterResource(R.drawable.time_icon),
                 iconColor = Color(0xFF2196F3),
                 title = "TIME TAKEN",
                 value = formatTime(data.bestTimeSec ?: 0),
@@ -454,7 +495,7 @@ private fun SudokuStatsSection(data: UniversalResult, difficulty: String) {
 
             StatCard(
                 modifier = Modifier.weight(1f),
-                icon = painterResource(R.drawable.check),
+                icon = painterResource(R.drawable.hint_without_ad),
                 iconColor = Color(0xFFFFC107),
                 title = "HINTS USED",
                 value = "${data.hintsUsed ?: 0}",
@@ -489,7 +530,7 @@ private fun MemoryMixStatsSection(data: UniversalResult, currentLevel: Int) {
         ) {
             StatCard(
                 modifier = Modifier.weight(1f),
-                icon = painterResource(R.drawable.close),
+                icon = painterResource(R.drawable.xp_figma),
                 iconColor = Color(0xFFFFD700),
                 title = "XP EARNED",
                 value = "+${data.xpEarned}",
@@ -498,7 +539,7 @@ private fun MemoryMixStatsSection(data: UniversalResult, currentLevel: Int) {
 
             StatCard(
                 modifier = Modifier.weight(1f),
-                icon = painterResource(R.drawable.book),
+                icon = painterResource(R.drawable.figma_coin),
                 iconColor = Color(0xFFFF9800),
                 title = "COINS EARNED",
                 value = "+${data.coinsEarned}",
@@ -680,12 +721,14 @@ private fun AlgebraActionButtons(
                 )
             }
 
-            GameButton(
-                text = "HOME",
-                icon = Icons.Default.Home,
-                modifier = Modifier.weight(1f),
-                onClick = onHome
-            )
+
+//            GameButton(
+//                text = "NEXT LEVEL",
+//                icon = Icons.Default.PlayArrow,
+//                isPrimary = true,
+//                modifier = Modifier.fillMaxWidth(),
+//                onClick = onNext
+//            )
         }
     }
 }
@@ -813,11 +856,10 @@ fun StatCard(
             modifier = Modifier.padding(20.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Icon(
+            Image(
                 painter = icon,
                 contentDescription = title,
-                tint = iconColor,
-                modifier = Modifier.size(32.dp)
+                modifier = Modifier.size(48.dp)
             )
 
             Spacer(modifier = Modifier.height(8.dp))
@@ -849,8 +891,8 @@ fun StatCard(
 }
 
 @Composable
- private fun StatBadge(
-    icon: ImageVector,
+private fun StatBadge(
+    icon: Painter,
     iconColor: Color,
     value: String,
     label: String
@@ -870,11 +912,10 @@ fun StatCard(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(6.dp)
         ) {
-            Icon(
-                imageVector = icon,
+            Image(
+                painter = icon,
                 contentDescription = label,
-                tint = iconColor,
-                modifier = Modifier.size(16.dp)
+                modifier = Modifier.size(24.dp)
             )
 
             Text(
@@ -1053,4 +1094,10 @@ private fun AnimatedParticles() {
             )
         }
     }
+}
+
+@Preview(showBackground = true, showSystemUi = true)
+@Composable
+fun Preview() {
+
 }

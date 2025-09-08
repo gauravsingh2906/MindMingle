@@ -8,6 +8,10 @@ object Resources {
     object Icon {
         val Plus = R.drawable.plus
         val Minus = R.drawable.minus
+
+        val VideoPlay = R.drawable.video_play
+        val HintWithAd = R.drawable.hint_bulb
+        val Hint = R.drawable.hint_without_ad
         val SignIn = R.drawable.log_in
         val SignOut = R.drawable.log_out
         val Unlock = R.drawable.unlock

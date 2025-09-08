@@ -28,11 +28,13 @@ import androidx.compose.ui.unit.sp
 data class GameGridItem(
     val id: String,
     val name: String,
+    val aboutGame: String,
+    val steps:List<String>,
     val description: String,
     val imageResId: Int,
     val cardColor: Color,
     val xp: Int,
-    val coins: Int,
+    val coins: List<String>,
     val isComingSoon: Boolean = false
 )
 
@@ -110,7 +112,7 @@ fun GameCardItem(
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 BadgeXP(xp = game.xp)
-                BadgeCoins(coins = game.coins)
+             //   BadgeCoins(coins = game.coins)
             }
         }
     }

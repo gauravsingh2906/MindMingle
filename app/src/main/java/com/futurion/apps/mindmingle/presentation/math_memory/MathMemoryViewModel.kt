@@ -16,14 +16,10 @@ import com.futurion.apps.mindmingle.presentation.games.SampleGames.Default
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.util.Random
 import javax.inject.Inject
-import kotlin.collections.get
-import kotlin.compareTo
 import kotlin.math.abs
 import kotlin.math.max
 
@@ -70,7 +66,6 @@ class MathMemoryViewModel @Inject constructor(
 
     init {
         setNewLevel(levelManager.currentLevel())
-
     }
 
     fun loadOrInitMathMemoryLevel() {
@@ -303,13 +298,13 @@ class MathMemoryViewModel @Inject constructor(
             gameName = "math_memory",
             levelReached = levelNum,
             won = isCorrect,
-            xpGained = xpEarned,
+            xpGained =if (isCorrect) xpEarned else 5,
             hintsUsed = hintsUsed,
             timeSpentSeconds = timeSpentSeconds,
             coinsEarned = coinsEarned,
             currentStreak = 1,
             bestStreak = bestStreak,
-            eachGameXp = xpEarned,
+            eachGameXp = if (isCorrect) xpEarned else 5,
             eachGameCoin = 12,
             resultTitle = "Congratulations!",
             resultMessage = "fds",
@@ -330,11 +325,29 @@ class MathMemoryViewModel @Inject constructor(
         }
     }
 
+    private val _remainingTime = MutableStateFlow(0)
+    val remainingTime: StateFlow<Int> = _remainingTime
+
+    fun startMemorizationTimer1(delayMs: Long) {
+        viewModelScope.launch {
+            val totalSeconds = (delayMs / 1000).toInt()
+            _remainingTime.value = totalSeconds
+
+            repeat(totalSeconds) {
+                delay(1000)
+                _remainingTime.value = totalSeconds - (it + 1)
+            }
+
+            onAction(MathMemoryAction.RevealCards)
+        }
+    }
+
+
     fun useHint() {
         _hintsUsed.value += 1
     }
 
-    fun getXpForLevel(level: Int): Int = 10 + ((level - 1) / 5) * 2
+    fun getXpForLevel(level: Int): Int = 20 + ((level - 1) / 5) * 2
 
     private fun log(message: String) {
         Log.d("MathMemoryVM", message)

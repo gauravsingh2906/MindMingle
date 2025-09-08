@@ -1,6 +1,7 @@
 package com.futurion.apps.mindmingle.presentation.game_detail
 
 import ContentWithMessageBar
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -8,6 +9,8 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
@@ -45,21 +48,28 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.futurion.apps.mindmingle.R
 import com.futurion.apps.mindmingle.domain.model.Difficulty
+import com.futurion.apps.mindmingle.presentation.game_detail.component.FlavorChip
+import com.futurion.apps.mindmingle.presentation.utils.Alpha
 import com.futurion.apps.mindmingle.presentation.utils.BebasNeueFont
+import com.futurion.apps.mindmingle.presentation.utils.ButtonDisabled
+import com.futurion.apps.mindmingle.presentation.utils.ButtonPrimary
 import com.futurion.apps.mindmingle.presentation.utils.FontSize
 import com.futurion.apps.mindmingle.presentation.utils.IconPrimary
 import com.futurion.apps.mindmingle.presentation.utils.Resources
+import com.futurion.apps.mindmingle.presentation.utils.RobotoCondensedFont
 import com.futurion.apps.mindmingle.presentation.utils.Surface
 import com.futurion.apps.mindmingle.presentation.utils.SurfaceBrand
 import com.futurion.apps.mindmingle.presentation.utils.SurfaceError
+import com.futurion.apps.mindmingle.presentation.utils.SurfaceLighter
 import com.futurion.apps.mindmingle.presentation.utils.TextPrimary
 import com.futurion.apps.mindmingle.presentation.utils.TextWhite
 import rememberMessageBarState
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun GameDetailScreen(
     gameTitle: String,
@@ -68,6 +78,7 @@ fun GameDetailScreen(
     coinsReward: Int,
     knowledgeBadges: List<String>, // e.g., ["Logic", "Focus", "Math"]
     howToPlaySteps: List<String>, // List of short instruction steps
+    howToEarnCons:List<String>,
     howToPlayImages: List<Int>, // Resource IDs for image carousel
     onStart: (String) -> Unit,
     navigateBack: () -> Unit,
@@ -136,94 +147,138 @@ fun GameDetailScreen(
             Column(
                 modifier = modifier
                     .fillMaxSize()
-                    .verticalScroll(rememberScrollState())
-                    .background(Color(0xFFF7FAFC)),
-                horizontalAlignment = Alignment.CenterHorizontally
+                    .background(Color(0xFFF7FAFC))
+                    .padding(horizontal = 14.dp)
+                    .verticalScroll(rememberScrollState()),
+                horizontalAlignment = Alignment.Start
             ) {
                 Text(
                     text = gameSubtitle,
-                    style = MaterialTheme.typography.titleMedium,
-                    modifier = Modifier.padding(top = 4.dp, bottom = 2.dp),
-                    color = Color(0xFF31363B),
+                    fontFamily = RobotoCondensedFont(),
+                    fontSize = FontSize.EXTRA_MEDIUM,
+                    fontWeight = FontWeight.Medium,
+                    modifier = Modifier.padding(top = 14.dp),
+                    color = TextPrimary,
                 )
 
                 // Knowledge / Badge Section
-                Row(
-                    Modifier.padding(vertical = 8.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    knowledgeBadges.forEach {
-                        Badge(label = it)
-                    }
-                }
+//                Row(
+//                    Modifier.padding(vertical = 8.dp),
+//                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+//                ) {
+//                    knowledgeBadges.forEach {
+//                        Badge(label = it)
+//                    }
+//                }
 
                 // XP and Coins Rewards
-                Row(
-                    Modifier.padding(vertical = 2.dp),
-                    horizontalArrangement = Arrangement.spacedBy(14.dp)
-                ) {
-                    RewardChip(icon = R.drawable.dollar, amount = xpReward, label = "XP")
-                    RewardChip(icon = R.drawable.check, amount = coinsReward, label = "Coins")
-                }
+//                Row(
+//                    Modifier.padding(top = 14.dp),
+//                    horizontalArrangement = Arrangement.spacedBy(14.dp)
+//                ) {
+//                    RewardChip(icon = R.drawable.dollar, amount = xpReward, label = "XP")
+//                    RewardChip(icon = R.drawable.figma_coin, amount = coinsReward, label = "Coins")
+//                }
+
+                Spacer(modifier = Modifier.height(14.dp))
 
                 // How to Play Section
                 SectionTitle("How to Play")
-                Column(Modifier.padding(horizontal = 24.dp)) {
+                Column(Modifier.padding(vertical = 16.dp)) {
                     howToPlaySteps.forEachIndexed { i, step ->
                         Text(
                             text = "Step ${i + 1}: $step",
-                            style = MaterialTheme.typography.bodyMedium,
+                            fontSize = FontSize.REGULAR,
+                            fontWeight = FontWeight.Medium,
                             modifier = Modifier.padding(vertical = 2.dp),
                             color = Color(0xFF222831)
                         )
                     }
                 }
 
-                // How to Play Carousel
-                Spacer(Modifier.height(6.dp))
-                ImageCarousel(
-                    images = howToPlayImages,
-                    currentIndex = carouselIndex,
-                    onIndexChange = { carouselIndex = it }
-                )
-
-                // Difficulty Selection
-                SectionTitle("Select Difficulty")
-                Row(
-                    Modifier
-                        .padding(top = 18.dp, bottom = 4.dp)
-                        .horizontalScroll(rememberScrollState()),
-                    horizontalArrangement = Arrangement.spacedBy(18.dp)
-                ) {
-                    Difficulty.entries.forEach { difficulty ->
-                        DifficultyOption(
-                            label = difficulty.name,
-                            icon = difficulty.icon,
-                            selected = selectedDifficulty == difficulty,
-                            onClick = {
-                                selectedDifficulty = difficulty
-                            }
+                SectionTitle("How to Earn Coins")
+                Column(Modifier.padding(vertical = 16.dp)) {
+                    howToEarnCons.forEachIndexed { i, step ->
+                        Text(
+                            text = "Step ${i + 1}: $step",
+                            fontSize = FontSize.REGULAR,
+                            fontWeight = FontWeight.Medium,
+                            modifier = Modifier.padding(vertical = 2.dp),
+                            color = Color(0xFF222831)
                         )
                     }
                 }
 
-                // CTA Button
-                Spacer(Modifier.height(24.dp))
+
+
+                // How to Play Carousel
+                Spacer(Modifier.height(6.dp))
+//                ImageCarousel(
+//                    images = howToPlayImages,
+//                    currentIndex = carouselIndex,
+//                    onIndexChange = { carouselIndex = it }
+//                )
+
+
+                AnimatedVisibility(
+                    visible = gameTitle == "Sudoku"
+                ) {
+                    SectionTitle("Select Difficulty")
+                }
+
+                AnimatedVisibility(
+                    visible = gameTitle == "Sudoku"
+                ) {
+                    Spacer(modifier = Modifier.height(14.dp))
+                }
+
+                AnimatedVisibility(
+                    modifier = Modifier.fillMaxSize(),
+                    visible = gameTitle == "Sudoku"
+                ) {
+
+                    FlowRow(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(24.dp),
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        Difficulty.entries.forEach { difficulty ->
+                            FlavorChip(
+                                label = difficulty.name,
+                                isSelected = selectedDifficulty == difficulty,
+                                onClick = {
+                                    selectedDifficulty = difficulty
+                                }
+                            )
+                            Spacer(Modifier.width(8.dp))
+                        }
+                    }
+                }
+
+
                 Button(
                     onClick = {
                         onStart(selectedDifficulty.name)
                     },
+                    enabled = Difficulty.entries.isNotEmpty(),
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 32.dp)
+                        .padding(24.dp)
                         .height(56.dp),
                     shape = RoundedCornerShape(26.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF76ABAE))
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = ButtonPrimary,
+                        contentColor = TextPrimary,
+                        disabledContainerColor = ButtonDisabled,
+                        disabledContentColor = TextPrimary.copy(alpha = Alpha.DISABLED)
+                    ),
                 ) {
                     Text(
-                        "Start $gameTitle",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = Color.White
+                        text = "Start $gameTitle",
+                        textAlign = TextAlign.Center,
+                        fontSize = FontSize.REGULAR,
+                        fontWeight = FontWeight.Medium,
+                        color = TextPrimary,
                     )
                 }
 
@@ -234,6 +289,7 @@ fun GameDetailScreen(
                     style = MaterialTheme.typography.bodySmall,
                     color = Color(0xFF444A53)
                 )
+
             }
         }
 
@@ -246,9 +302,10 @@ fun GameDetailScreen(
 fun SectionTitle(title: String) {
     Text(
         text = title,
-        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
+        fontFamily = RobotoCondensedFont(),
+        fontSize = FontSize.EXTRA_MEDIUM,
+        fontWeight = FontWeight.Medium,
         color = Color(0xFF0077B6),
-        modifier = Modifier.padding(top = 28.dp, bottom = 8.dp)
     )
 }
 
@@ -273,11 +330,10 @@ fun RewardChip(icon: Int, amount: Int, label: String) {
             .background(Color(0xFFF3F9FB), RoundedCornerShape(50))
             .padding(horizontal = 12.dp, vertical = 4.dp)
     ) {
-        Icon(
-            painterResource(id = icon),
-            contentDescription = label,
-            modifier = Modifier.size(20.dp),
-            tint = Color(0xFF76ABAE)
+        Image(
+            painter = painterResource(icon)
+            , contentDescription = label,
+            modifier = Modifier.size(40.dp)
         )
         Spacer(Modifier.width(4.dp))
         Text(

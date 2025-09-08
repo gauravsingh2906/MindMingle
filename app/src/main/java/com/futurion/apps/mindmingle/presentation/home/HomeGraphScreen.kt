@@ -11,9 +11,12 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Person
@@ -39,7 +42,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.futurion.apps.mindmingle.R
-import com.futurion.apps.mindmingle.RewardedAdManager
+
 import com.futurion.apps.mindmingle.data.local.entity.OverallProfileEntity
 import com.futurion.apps.mindmingle.presentation.games.GameGridItem
 import com.futurion.apps.mindmingle.presentation.games.GamesScreen
@@ -49,6 +52,7 @@ import com.futurion.apps.mindmingle.presentation.home.domain.BottomBarDestinatio
 import com.futurion.apps.mindmingle.presentation.mind_mingle.MindMingleScreen
 import com.futurion.apps.mindmingle.presentation.navigation.Screen
 import com.futurion.apps.mindmingle.presentation.profile.ProfileScreen
+import com.futurion.apps.mindmingle.presentation.profile.StatChip
 import com.futurion.apps.mindmingle.presentation.profile.StatsViewModel
 import com.futurion.apps.mindmingle.presentation.utils.AppBackground
 import com.futurion.apps.mindmingle.presentation.utils.BebasNeueFont
@@ -62,7 +66,8 @@ import rememberMessageBarState
 @Composable
 fun HomeGraphScreen(
     modifier: Modifier = Modifier,
-    navigateToGameDetail: (String) -> Unit
+    navigateToGameDetail: (String) -> Unit,
+    coins: String
 ) {
 
     val navController = rememberNavController()
@@ -88,6 +93,7 @@ fun HomeGraphScreen(
             .fillMaxSize()
             .background(AppBackground)
             .systemBarsPadding()
+            .navigationBarsPadding()
     ) {
         Scaffold(
             containerColor = AppBackground,
@@ -106,23 +112,44 @@ fun HomeGraphScreen(
                         }
                     },
                     navigationIcon = {
-                        IconButton(
-                            onClick = {
-                                navController.navigate(Screen.Games)
-                            }
+
+                        AnimatedVisibility(
+                            visible = selectedDestination != BottomBarDestination.Games
                         ) {
-                            AnimatedVisibility(
-                                visible = selectedDestination == BottomBarDestination.Games
+
+                            IconButton(
+                                onClick = {
+                                    navController.navigate(Screen.Games)
+                                }
                             ) {
                                 Icon(
-                                    imageVector = Icons.Default.Person,
+                                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                                     contentDescription = "Menu",
                                     tint = IconPrimary
                                 )
                             }
                         }
+
+//                        IconButton(
+//                            onClick = {
+//                                navController.navigate(Screen.Games)
+//                            }
+//                        ) {
+//                            AnimatedVisibility(
+//                                visible = selectedDestination == BottomBarDestination.Games
+//                            ) {
+//                                Icon(
+//                                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+//                                    contentDescription = "Menu",
+//                                    tint = IconPrimary
+//                                )
+//                            }
+//                        }
                     },
                     actions = {
+
+                        StatChip(icon = "💰", label = "Coins", value = coins)
+
                         IconButton(
                             onClick = {
                                 navController.navigate(Screen.Profile)
@@ -190,9 +217,9 @@ fun HomeGraphScreen(
                             val us = "d41e5130-eacf-401a-bd03-e0cb4c0c9a96"
                             Log.d("User", userId.toString())
 
-                            val rewardedAdManager = remember {
-                                RewardedAdManager(context, "ca-app-pub-3940256099942544/5224354917")
-                            }
+//                            val rewardedAdManager = remember {
+//                                RewardedAdManager(context, "ca-app-pub-3940256099942544/5224354917")
+//                            }
 
                             ProfileScreen(
                                 profile = profile

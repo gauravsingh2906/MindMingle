@@ -1,5 +1,6 @@
 package com.futurion.apps.mindmingle.presentation.themes_screen
 
+import android.widget.Toast
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -12,8 +13,10 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -33,6 +36,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -40,9 +44,9 @@ import com.futurion.apps.mindmingle.domain.model.GameTheme
 
 @Composable
 fun ThemeUnlockScreen(
-    themeViewModel: ThemeViewModel=hiltViewModel(),
+    themeViewModel: ThemeViewModel = hiltViewModel(),
     modifier: Modifier = Modifier,
-    onThemeSelected: (GameTheme) -> Unit
+    onThemeSelected:(GameTheme) -> Unit
 ) {
     val loading by remember { derivedStateOf { themeViewModel.loading.value } }
     val coins by remember { derivedStateOf { themeViewModel.userCoins.value } }
@@ -62,6 +66,8 @@ fun ThemeUnlockScreen(
             .fillMaxSize()
             .background(Color(0xFFF0F0F0))
             .padding(16.dp)
+            .systemBarsPadding()
+            .navigationBarsPadding()
     ) {
         Text(
             text = "Your Coins: $coins",
@@ -74,8 +80,9 @@ fun ThemeUnlockScreen(
             contentPadding = PaddingValues(bottom = 24.dp)
         ) {
             items(themeViewModel.unlockableThemes) { unlockable ->
-                val isUnlocked = unlockedThemes.contains(unlockable.theme.name)
+                val isUnlocked = unlockedThemes.contains(unlockable.theme.name) || unlockable.coinCost == 0
                 val isSelected = selectedThemeState?.theme?.name == unlockable.theme.name
+
                 ThemeItem(
                     theme = unlockable.theme,
                     coinCost = unlockable.coinCost,
@@ -91,6 +98,7 @@ fun ThemeUnlockScreen(
                 )
             }
         }
+
     }
 }
 
@@ -100,9 +108,11 @@ private fun ThemeItem(
     coinCost: Int,
     isUnlocked: Boolean,
     isSelected: Boolean,
-    onUnlockClick: () -> Unit,
+    onUnlockClick: () -> Boolean, // returns true if unlock succeeds
     onSelectClick: () -> Unit
 ) {
+    val context = LocalContext.current
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -111,14 +121,15 @@ private fun ThemeItem(
             .shadow(if (isSelected) 8.dp else 0.dp, RoundedCornerShape(14.dp))
             .clickable(enabled = isUnlocked) { if (isUnlocked) onSelectClick() },
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(16.dp)) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.padding(16.dp)
+        ) {
             Image(
                 painter = painterResource(theme.backgroundImage),
                 contentDescription = "Theme ${theme.name}",
                 contentScale = ContentScale.Crop,
-                modifier = Modifier
-                    .size(72.dp)
-                    .clip(RoundedCornerShape(10.dp))
+                modifier = Modifier.size(72.dp).clip(RoundedCornerShape(10.dp))
             )
 
             Spacer(modifier = Modifier.size(12.dp))
@@ -129,6 +140,7 @@ private fun ThemeItem(
                     color = theme.textColor,
                     style = MaterialTheme.typography.titleLarge
                 )
+
                 if (isUnlocked) {
                     Text(
                         text = "Unlocked",
@@ -147,6 +159,7 @@ private fun ThemeItem(
             if (isUnlocked) {
                 Button(
                     onClick = onSelectClick,
+                    enabled = !isSelected,
                     colors = ButtonDefaults.buttonColors(
                         containerColor = theme.buttonColor,
                         contentColor = theme.buttonTextColor
@@ -156,7 +169,17 @@ private fun ThemeItem(
                 }
             } else {
                 Button(
-                    onClick = onUnlockClick,
+                    onClick = {
+                        val unlocked = onUnlockClick()
+                        if (!unlocked) {
+                            Toast.makeText(
+                                context,
+                                "You do not have enough coins. Watch the ad and earn coins!",
+                                Toast.LENGTH_LONG
+                            ).show()
+                        }
+                    },
+                    enabled = coinCost > 0,
                     colors = ButtonDefaults.buttonColors(
                         containerColor = theme.buttonColor,
                         contentColor = theme.buttonTextColor
@@ -168,3 +191,80 @@ private fun ThemeItem(
         }
     }
 }
+
+
+
+//@Composable
+//private fun ThemeItem(
+//    theme: GameTheme,
+//    coinCost: Int,
+//    isUnlocked: Boolean,
+//    isSelected: Boolean,
+//    onUnlockClick: () -> Unit,
+//    onSelectClick: () -> Unit
+//) {
+//    Card(
+//        modifier = Modifier
+//            .fillMaxWidth()
+//            .height(110.dp)
+//            .clip(RoundedCornerShape(14.dp))
+//            .shadow(if (isSelected) 8.dp else 0.dp, RoundedCornerShape(14.dp))
+//            .clickable(enabled = isUnlocked) { if (isUnlocked) onSelectClick() },
+//    ) {
+//        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(16.dp)) {
+//            Image(
+//                painter = painterResource(theme.backgroundImage),
+//                contentDescription = "Theme ${theme.name}",
+//                contentScale = ContentScale.Crop,
+//                modifier = Modifier
+//                    .size(72.dp)
+//                    .clip(RoundedCornerShape(10.dp))
+//            )
+//
+//            Spacer(modifier = Modifier.size(12.dp))
+//
+//            Column(modifier = Modifier.weight(1f)) {
+//                Text(
+//                    text = theme.name,
+//                    color = theme.textColor,
+//                    style = MaterialTheme.typography.titleLarge
+//                )
+//                if (isUnlocked) {
+//                    Text(
+//                        text = "Unlocked",
+//                        color = theme.textColor,
+//                        style = MaterialTheme.typography.bodyMedium
+//                    )
+//                } else {
+//                    Text(
+//                        text = "Unlock for $coinCost coins",
+//                        color = theme.textColor,
+//                        style = MaterialTheme.typography.bodyMedium
+//                    )
+//                }
+//            }
+//
+//            if (isUnlocked) {
+//                Button(
+//                    onClick = onSelectClick,
+//                    colors = ButtonDefaults.buttonColors(
+//                        containerColor = theme.buttonColor,
+//                        contentColor = theme.buttonTextColor
+//                    )
+//                ) {
+//                    Text(text = if (isSelected) "Selected" else "Select")
+//                }
+//            } else {
+//                Button(
+//                    onClick = onUnlockClick,
+//                    colors = ButtonDefaults.buttonColors(
+//                        containerColor = theme.buttonColor,
+//                        contentColor = theme.buttonTextColor
+//                    )
+//                ) {
+//                    Text(text = "Unlock")
+//                }
+//            }
+//        }
+//    }
+//}

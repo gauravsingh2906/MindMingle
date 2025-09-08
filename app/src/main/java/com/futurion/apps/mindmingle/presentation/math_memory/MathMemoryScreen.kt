@@ -2,6 +2,7 @@ package com.futurion.apps.mindmingle.presentation.math_memory
 
 import android.annotation.SuppressLint
 import android.app.Activity
+import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearOutSlowInEasing
@@ -22,9 +23,13 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentHeight
+import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -57,6 +62,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -80,13 +86,16 @@ import com.futurion.apps.mindmingle.presentation.game_result.StatCard
 import com.futurion.apps.mindmingle.presentation.games.SampleGames.Default
 import com.futurion.apps.mindmingle.presentation.profile.StatsViewModel
 import com.futurion.apps.mindmingle.presentation.utils.BebasNeueFont
+import com.futurion.apps.mindmingle.presentation.utils.Constants
 import com.futurion.apps.mindmingle.presentation.utils.FontSize
 import com.futurion.apps.mindmingle.presentation.utils.IconPrimary
 import com.futurion.apps.mindmingle.presentation.utils.Resources
 import com.futurion.apps.mindmingle.presentation.utils.Surface
 import com.futurion.apps.mindmingle.presentation.utils.TextPrimary
 import kotlinx.coroutines.delay
+import java.time.format.TextStyle
 
+private enum class TutorialPhase { WELCOME, MEMORIZE, SOLVE, RESULT }
 
 @SuppressLint("StateFlowValueCalledInComposition")
 @Composable
@@ -106,17 +115,15 @@ fun MathMemoryScreen(
     val theme = uiState.theme.selectedTheme
     val userId = statsViewModel.userId.value ?: "4045582c-f745-4822-a1d2-d882132176d8"
 
-    val phase = when {
-        uiState.game.isShowCards -> "MEMORIZE"
-        !uiState.game.showResult -> "SOLVE"
-        else -> "RESULT"
+    var tutPhase by remember(uiState.game.level.number) {
+        mutableStateOf(if (uiState.game.level.number == 1) TutorialPhase.WELCOME else TutorialPhase.RESULT)
     }
 
     LaunchedEffect(uiState.game.level, uiState.game.isShowCards) {
         if (uiState.game.isShowCards) {
             val baseDelay = 2400L
             val perCardDelay = 600L
-            viewModel.startMemorizationTimer(baseDelay + uiState.game.level.cards.size * perCardDelay)
+            viewModel.startMemorizationTimer1(baseDelay + uiState.game.level.cards.size * perCardDelay)
         }
     }
 
@@ -137,14 +144,13 @@ fun MathMemoryScreen(
 
     val coinsEarned = when {
         viewModel.currentStreak.value > viewModel.bestStreak.value -> 50
-        viewModel.currentStreak.value >= 3 -> 20
+        viewModel.currentStreak.value == 3 || viewModel.currentStreak.value == 5 -> 20
         else -> 0
     }
 
     val context = LocalContext.current
     val activity = context as? Activity
-    val googleAdManager = GoogleRewardedAdManager(context)
-    val adMobAdUnitId = "ca-app-pub-3940256099942544/5224354917"
+    val googleAdManager = GoogleRewardedAdManager(context, Constants.AD_Unit)
 
     if (showResult && lastSavedLevel != gameLevel) {
         LaunchedEffect(gameLevel, showResult) {
@@ -161,147 +167,379 @@ fun MathMemoryScreen(
         }
     }
 
-    Scaffold(
-        containerColor = Surface
-    ) { it->
-        Box(modifier = Modifier.fillMaxSize().padding(it)) {
-            Image(
-                painter = painterResource(theme.backgroundImage),
-                contentDescription = null,
-                contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxSize()
-            )
-            Box(
-                Modifier
-                    .fillMaxSize()
-                    .background(Color.Black.copy(alpha = 0.44f))
-            )
-            Column(
-                Modifier
-                    .fillMaxSize()
-                    .padding(horizontal = 20.dp, vertical = 14.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                ThemeSelector(
-                    builtInThemes = Default,
-                    selectedTheme = theme,
-                    unlockedNames = uiState.theme.unlockedThemes,
-                    onSelect = { viewModel.onAction(MathMemoryAction.SelectTheme(it)) }
-                )
-                IconButton(
-                    onClick = { navigateToThemeUnlock(userId) }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .systemBarsPadding()
+            .navigationBarsPadding()
+    ) {
+        // background + overlay
+        Image(
+            painter = painterResource(theme.backgroundImage),
+            contentDescription = null,
+            contentScale = ContentScale.Crop,
+            modifier = Modifier.fillMaxSize()
+        )
+        Box(
+            Modifier
+                .fillMaxSize()
+                .background(Color.Black.copy(alpha = 0.44f))
+        )
+
+        // Determine whether header should be visible.
+        // Header visible only during MEMORIZE and SOLVE (tutorial or normal).
+        val tutorialMemorizeOrSolve =
+            uiState.game.level.number == 1 && (tutPhase == TutorialPhase.MEMORIZE || tutPhase == TutorialPhase.SOLVE)
+        val normalMemorizeOrSolve =
+            uiState.game.level.number > 1 && (uiState.game.isShowCards || !uiState.game.showResult)
+        val showHeader = tutorialMemorizeOrSolve || normalMemorizeOrSolve
+
+        // Outer column: header (wrap content) + phase box (fills remaining)
+        Column(modifier = Modifier.fillMaxSize()) {
+
+            // Header: only shown during MEMORIZE and SOLVE
+            if (showHeader) {
+                Column(
+                    Modifier
+                        .wrapContentHeight()
+                        .padding(horizontal = 20.dp, vertical = 14.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Icon(imageVector = Icons.Default.Home, contentDescription = "Unlock Theme")
-                }
-
-                Spacer(Modifier.height(14.dp))
-
-                Text(
-                    text = "Level ${uiState.game.level.number}",
-                    style = MaterialTheme.typography.headlineSmall,
-                    modifier = Modifier.padding(bottom = 10.dp),
-                    color = if (phase == "RESULT" && isCorrect) Color(0xFF388E3C) else theme.textColor
-                )
-
-                when (phase) {
-                    "MEMORIZE" -> Text(
-                        text = "👀 Memorize the moves! Start from:",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = theme.textColor,
-                        modifier = Modifier.padding(bottom = 10.dp)
+                    ThemeSelector(
+                        builtInThemes = Default,
+                        selectedTheme = theme,
+                        unlockedNames = uiState.theme.unlockedThemes,
+                        onSelect = { viewModel.onAction(MathMemoryAction.SelectTheme(it)) }
                     )
 
-                    "SOLVE" -> Text(
-                        text = "Now solve: Start at the number below, do each step left-to-right (no BODMAS)!",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = theme.textColor,
-                        modifier = Modifier.padding(bottom = 10.dp)
-                    )
+                    Box(
+                        Modifier
+                            .clickable(onClick = { navigateToThemeUnlock(userId) })
+                            .background(
+                                shape = CircleShape,
+                                color = Color.White
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        IconButton(onClick = { navigateToThemeUnlock(userId) }) {
+                            Icon(
+                                imageVector = Icons.Default.Home,
+                                contentDescription = "Unlock Theme"
+                            )
+                        }
+                    }
 
-                    else -> Unit
-                }
 
-                StartNumberBox(
-                    value = uiState.game.level.start,
-                    textColor = theme.buttonTextColor,
-                    bgColor = theme.buttonColor
-                )
-                Spacer(Modifier.height(10.dp))
 
-                if (phase == "MEMORIZE") {
-                    CardsRow(cards = uiState.game.level.cards, textColor = theme.textColor)
-                    Spacer(Modifier.height(10.dp))
+                    Spacer(Modifier.height(14.dp))
+
                     Text(
-                        "Try to remember all the moves and the start number!",
-                        color = Color.White,
-                        style = MaterialTheme.typography.bodySmall
+                        text = "Level ${uiState.game.level.number}",
+                        style = MaterialTheme.typography.headlineSmall,
+                        color = if ((uiState.game.level.number >= 2 && uiState.game.showResult && isCorrect) ||
+                            (uiState.game.level.number == 1 && tutPhase == TutorialPhase.RESULT && isCorrect)
+                        ) Color(0xFF388E3C) else theme.textColor
                     )
                 }
+            }
 
-                if (phase == "SOLVE") {
-                    Spacer(Modifier.height(16.dp))
-                    AnswerOptionsColumn(
-                        options = answerOptions,
-                        onSelect = { selected ->
-                            viewModel.onAction(MathMemoryAction.InputChanged(selected.value.toString()))
-                            viewModel.onAction(MathMemoryAction.SubmitAnswer)
-                        },
-                        selectedTheme = theme
-                    )
-                    Spacer(Modifier.height(8.dp))
-                    Text(
-                        text = "Tip: Start at ${uiState.game.level.start}, do every step one after another.",
-                        color = Color.White,
-                        style = MaterialTheme.typography.bodySmall
-                    )
-                    if (!secondChanceUsed) {
-                        Button(
-                            onClick = {
-                                googleAdManager.loadRewardedAd(adMobAdUnitId) { loaded ->
-                                    if (loaded && activity != null) {
-                                        googleAdManager.showRewardedAd(
-                                            activity, onUserEarnedReward = {
-                                                viewModel.onAction(MathMemoryAction.HideCards)
-                                                viewModel.useHint()
-                                            }, onClosed = {}
+            // Phase area - fills all remaining space. If header is hidden, this is full screen.
+            Box(
+                modifier = Modifier
+                    .fillMaxSize(),
+            ) {
+                // Tutorial (level 1)
+                if (uiState.game.level.number == 1) {
+                    when (tutPhase) {
+                        TutorialPhase.WELCOME -> {
+                            WelcomeTutorial(onStart = { tutPhase = TutorialPhase.MEMORIZE })
+                        }
+
+                        TutorialPhase.MEMORIZE -> {
+                            // Keep header visible in MEMORIZE (we already did)
+                            TutorialMemorize(
+                                startNumber = uiState.game.level.start,
+                                onProceed = { tutPhase = TutorialPhase.SOLVE }
+                            )
+                        }
+
+                        TutorialPhase.SOLVE -> {
+                            // The Solve tutorial view (header is visible)
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.Center,
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .padding(16.dp)
+                            ) {
+                                Text(
+                                    text = "Step 2: Tap the correct result!",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    color = theme.textColor,
+                                    modifier = Modifier.padding(bottom = 12.dp)
+                                )
+
+//                                StartNumberBox(
+//                                    value = uiState.game.level.start,
+//                                    textColor = theme.buttonTextColor,
+//                                    bgColor = theme.buttonColor
+//                                )
+
+                                Spacer(Modifier.height(16.dp))
+
+                                AnswerOptionsColumn(
+                                    options = answerOptions,
+                                    onSelect = { selected ->
+                                        viewModel.onAction(MathMemoryAction.InputChanged(selected.value.toString()))
+                                        viewModel.onAction(MathMemoryAction.SubmitAnswer)
+                                        tutPhase = TutorialPhase.RESULT
+                                    },
+                                    selectedTheme = theme
+                                )
+
+                                Spacer(Modifier.height(8.dp))
+                                Text(
+                                    text = "Hint: start at ${uiState.game.level.start} and apply each step.",
+                                    color = Color.White,
+                                    style = MaterialTheme.typography.bodySmall
+                                )
+                            }
+                        }
+
+                        TutorialPhase.RESULT -> {
+                            // RESULT: hide header and show full-screen result
+                            ResultFullScreen(
+                                isCorrect = uiState.game.isCorrect,
+                                level = uiState.game.level.number,
+                                totalXp = viewModel.totalXp.collectAsState().value,
+                                totalCoins = viewModel.totalCoins.collectAsState().value,
+                                xpEarned = viewModel.getXpForLevel(uiState.game.level.number),
+                                coinsEarned = coinsEarned,
+                                streak = viewModel.currentStreak.collectAsState().value,
+                                bestStreak = viewModel.bestStreak.collectAsState().value,
+                                onNext = { viewModel.onAction(MathMemoryAction.NextLevel) },
+                                onRetry = {
+                                    viewModel.onAction(MathMemoryAction.ResetGame)
+                                    tutPhase = TutorialPhase.WELCOME
+                                },
+                                navigateToGames = navigateToGames
+                            )
+                        }
+                    }
+                } else {
+                    // Normal flow (level >= 2)
+                    val normalPhase = when {
+                        uiState.game.isShowCards -> "MEMORIZE"
+                        !uiState.game.showResult -> "SOLVE"
+                        else -> "RESULT"
+                    }
+
+                    when (normalPhase) {
+                        "MEMORIZE" -> {
+                            // Header visible here
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .padding(16.dp)
+                            ) {
+                                Text(
+                                    text = viewModel.remainingTime.collectAsState().value.toString(),
+                                    style = androidx.compose.ui.text.TextStyle(
+                                        fontSize = 72.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color.White
+                                    )
+                                )
+
+                                Text(
+                                    text = "👀 Memorize the moves left to right",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    color = theme.textColor,
+                                    modifier = Modifier.padding(bottom = 10.dp)
+                                )
+
+                                Spacer(Modifier.height(10.dp))
+
+                                CardsRow1(
+                                    startNumber = uiState.game.level.start,
+                                    cards = uiState.game.level.cards,
+                                    textColor = theme.textColor
+                                )
+
+                                Spacer(Modifier.height(10.dp))
+                                Text(
+                                    "Try to remember all the moves",
+                                    color = Color.White,
+                                    style = MaterialTheme.typography.bodySmall
+                                )
+                            }
+                        }
+
+                        "SOLVE" -> {
+                            // Header visible here as well
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .padding(16.dp)
+                            ) {
+                                Text(
+                                    text = "Now solve: do steps left→right (no BODMAS).",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    color = theme.textColor,
+                                    modifier = Modifier.padding(bottom = 10.dp)
+                                )
+
+                                Spacer(Modifier.height(16.dp))
+
+                                AnswerOptionsColumn(
+                                    options = answerOptions,
+                                    onSelect = { selected ->
+                                        viewModel.onAction(MathMemoryAction.InputChanged(selected.value.toString()))
+                                        viewModel.onAction(MathMemoryAction.SubmitAnswer)
+                                    },
+                                    selectedTheme = theme
+                                )
+
+                                Spacer(Modifier.height(8.dp))
+                                Text(
+                                    text = "Tip: Start at ${uiState.game.level.start}, apply every step in order.",
+                                    color = Color.White,
+                                    style = MaterialTheme.typography.bodySmall
+                                )
+                                Spacer(Modifier.height(8.dp))
+
+                                if (!secondChanceUsed) {
+                                    Button(
+                                        onClick = {
+                                            if (activity != null) {
+                                                googleAdManager.showRewardedAd(
+                                                    activity,
+                                                    onUserEarnedReward = {
+                                                        viewModel.onAction(MathMemoryAction.HideCards)
+                                                        viewModel.useHint()
+                                                        secondChanceUsed = true
+                                                        showMemorizePhaseAgain = true
+                                                    },
+                                                    onClosed = {
+                                                        if (!secondChanceUsed) {
+                                                            Toast.makeText(context, "Ad not ready, please try again.", Toast.LENGTH_SHORT).show()
+                                                        }
+                                                    }
+                                                )
+                                            }
+                                        },
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(vertical = 12.dp),
+                                        colors = ButtonDefaults.buttonColors(
+                                            containerColor = Color(0xFFFFD600)
                                         )
+                                    ) {
+                                        Text("👁 Watch Ad to See Moves Again")
                                     }
                                 }
 
-                                secondChanceUsed = true
-                                showMemorizePhaseAgain = true
-                            },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 12.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFD600))
-                        ) {
-                            Text("👁 Watch Ad to See Moves Again")
+                            }
+                        }
+
+                        else -> {
+                            // RESULT - hide header (Box is full size) and show ResultFullScreen
+                            ResultFullScreen(
+                                isCorrect = uiState.game.isCorrect,
+                                level = uiState.game.level.number,
+                                totalXp = totalXp,
+                                totalCoins = totalCoins,
+                                xpEarned = viewModel.getXpForLevel(uiState.game.level.number),
+                                coinsEarned = coinsEarned,
+                                streak = viewModel.currentStreak.collectAsState().value,
+                                bestStreak = viewModel.bestStreak.collectAsState().value,
+                                onNext = { viewModel.onAction(MathMemoryAction.NextLevel) },
+                                onRetry = { viewModel.onAction(MathMemoryAction.ResetGame) },
+                                navigateToGames = navigateToGames
+                            )
                         }
                     }
                 }
             }
 
-            if (phase == "RESULT") {
-                ResultFullScreen(
-                    isCorrect = uiState.game.isCorrect,
-                    level = uiState.game.level.number,
-                    totalXp = totalXp,
-                    totalCoins = totalCoins,
-                    xpEarned = viewModel.getXpForLevel(uiState.game.level.number),
-                    coinsEarned = coinsEarned,
-                    streak = viewModel.currentStreak.value,
-                    bestStreak = viewModel.bestStreak.value,
-                    onNext = { viewModel.onAction(MathMemoryAction.NextLevel) },
-                    onRetry = { viewModel.onAction(MathMemoryAction.ResetGame) },
-                    navigateToGames = navigateToGames
-                )
+        }
+    }
+}
+
+
+@Composable
+private fun WelcomeTutorial(onStart: () -> Unit) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color(0xFF1976D2))
+            .padding(24.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(
+                text = "👋 Welcome to Math Memory!",
+                fontSize = 28.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color.White
+            )
+            Spacer(Modifier.height(16.dp))
+            Text(
+                text = "In this quick tutorial you'll see the numbers and learn how to answer.",
+                fontSize = 18.sp,
+                color = Color.White.copy(alpha = 0.9f)
+            )
+            Spacer(Modifier.height(48.dp))
+            Button(onClick = onStart) {
+                Text("Start Tutorial →")
             }
         }
     }
-
-
 }
+
+@Composable
+private fun TutorialMemorize(
+    viewModel: MathMemoryViewModel = hiltViewModel(),
+    startNumber: Int,
+    onProceed: () -> Unit
+) {
+
+    val uiState = viewModel.uiState.value
+
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Text(
+            text = "Solve the equation from left to right ",
+            fontSize = 22.sp,
+            fontWeight = FontWeight.Bold,
+            color = Color.White
+        )
+
+
+        CardsRow1(
+            startNumber = startNumber,
+            cards = uiState.game.level.cards,
+            textColor = uiState.theme.selectedTheme.textColor
+        )
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+
+        Button(onClick = onProceed) {
+            Text("I Got It →")
+        }
+    }
+}
+
 
 @Composable
 fun ResultFullScreen(
@@ -345,11 +583,21 @@ fun ResultFullScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
 
-                IconButton(onClick = navigateToGames) {
-                    Icon(
-                        imageVector = Icons.Default.Home,
-                        contentDescription = "Unlock Theme"
-                    )
+                Box(
+                    Modifier
+                        .clickable(onClick = navigateToGames)
+                        .background(
+                            shape = CircleShape,
+                            color = Color.White
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    IconButton(onClick = navigateToGames) {
+                        Icon(
+                            imageVector = Icons.Default.Home,
+                            contentDescription = "Unlock Theme"
+                        )
+                    }
                 }
 
                 Spacer(modifier = Modifier.weight(1f))
@@ -360,7 +608,7 @@ fun ResultFullScreen(
                 )
 
                 StatBadge(
-                    icon = Icons.Default.Star,
+                    icon = painterResource(R.drawable.xp_figma),
                     iconColor = Color(0xFFFFD700),
                     value = xpAnim.toString(),
                     label = "XP"
@@ -375,7 +623,7 @@ fun ResultFullScreen(
 
                 // Total Coins
                 StatBadge(
-                    icon = Icons.Default.AccountBox,
+                    icon = painterResource(R.drawable.figma_coin),
                     iconColor = Color(0xFFFF9800),
                     value = coinsAnim.toString(),
                     label = "Coins"
@@ -444,14 +692,11 @@ fun ResultFullScreen(
                             ),
                         contentAlignment = Alignment.Center
                     ) {
-                        Icon(
-                            painter = if (isCorrect) painterResource(R.drawable.book) else painterResource(
+                        Image(
+                            painter = if (isCorrect) painterResource(R.drawable.figma_trophy) else painterResource(
                                 R.drawable.weight
                             ),
                             contentDescription = "Trophy",
-                            tint = if (isCorrect) Color(0xFFFFD700) else Color(
-                                0xFFFF5252
-                            ),
                             modifier = Modifier.size(40.dp)
                         )
                     }
@@ -495,16 +740,16 @@ fun ResultFullScreen(
                     ) {
                         StatCard(
                             modifier = Modifier.weight(1f),
-                            icon = painterResource(R.drawable.close),
+                            icon = painterResource(R.drawable.xp_figma),
                             iconColor = Color(0xFFFFD700),
                             title = "XP EARNED",
-                            value = "+${xpEarned}",
+                            value = "+${if (isCorrect) xpEarned else 10}",
                             subtitle = "This Level"
                         )
 
                         StatCard(
                             modifier = Modifier.weight(1f),
-                            icon = painterResource(R.drawable.book),
+                            icon = painterResource(R.drawable.figma_coin),
                             iconColor = Color(0xFFFF9800),
                             title = "COINS EARNED",
                             value = "+${coinsEarned}",
@@ -514,7 +759,7 @@ fun ResultFullScreen(
 
                     StatCard(
                         modifier = Modifier.fillMaxWidth(),
-                        icon = painterResource(R.drawable.grid),
+                        icon = painterResource(R.drawable.fire_icon),
                         iconColor = Color(0xFFFF5722),
                         title = "STREAK POWER",
                         value = "${streak} / ${bestStreak}",
@@ -643,7 +888,7 @@ fun StartNumberCircle(value: Int, textColor: Color, bgColor: Color) {
 
 @Composable
 private fun StatBadge(
-    icon: ImageVector,
+    icon: Painter,
     iconColor: Color,
     value: String,
     label: String
@@ -663,11 +908,10 @@ private fun StatBadge(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(6.dp)
         ) {
-            Icon(
-                imageVector = icon,
+            Image(
+                painter = icon,
                 contentDescription = label,
-                tint = iconColor,
-                modifier = Modifier.size(16.dp)
+                modifier = Modifier.size(24.dp)
             )
 
             Text(
@@ -689,37 +933,6 @@ private fun StatBadge(
 
 
 @Composable
-fun StartNumberBox(value: Int, textColor: Color, bgColor: Color) {
-    Card(
-        shape = RoundedCornerShape(13.dp),
-        colors = CardDefaults.cardColors(containerColor = bgColor),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
-    ) {
-        Text(
-            "Start: $value",
-            color = textColor,
-            style = MaterialTheme.typography.titleLarge,
-            modifier = Modifier.padding(horizontal = 23.dp, vertical = 6.dp)
-        )
-    }
-}
-
-//@Composable
-//fun StatChip(label: String, value: Int) {
-//    ElevatedCard(
-//        shape = RoundedCornerShape(14.dp),
-//        colors = CardDefaults.cardColors(containerColor = Color.White),
-//        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-//        modifier = Modifier.size(width = 70.dp, height = 42.dp)
-//    ) {
-//        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-//            Text(label, style = MaterialTheme.typography.labelSmall, color = Color.Gray)
-//            Text(value.toString(), style = MaterialTheme.typography.titleMedium, color = Color.Black)
-//        }
-//    }
-//}
-
-@Composable
 fun CardsRow(cards: List<MemoryCard>, textColor: Color) {
     val rows = (cards.size + 4) / 5 // Show 5 per row, adapt as needed
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -731,7 +944,7 @@ fun CardsRow(cards: List<MemoryCard>, textColor: Color) {
                         modifier = Modifier
                             .size(44.dp)
                             .clip(RoundedCornerShape(6.dp))
-                            .background(Color.White.copy(alpha = 0.94f)),
+                            .background(Color.Black.copy(alpha = 0.94f)),
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
@@ -750,6 +963,72 @@ fun CardsRow(cards: List<MemoryCard>, textColor: Color) {
         }
     }
 }
+
+@Composable
+fun CardsRow1(
+    cards: List<MemoryCard>,
+    textColor: Color,
+    startNumber: Int? = null // NEW: Accept start number optionally
+) {
+    // New: Create a composable for start number card
+    @Composable
+    fun StartNumberCard(number: Int) {
+        Box(
+            Modifier
+                .size(44.dp)
+                .clip(RoundedCornerShape(6.dp))
+                .background(Color.Black.copy(alpha = 0.94f)),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = number.toString(),
+                color = textColor,
+                fontWeight = FontWeight.Bold,
+                style = MaterialTheme.typography.bodyLarge
+            )
+        }
+    }
+
+    val allCards: List<Any> = if (startNumber != null) {
+        listOf(startNumber) + cards
+    } else {
+        cards
+    }
+
+    val rows = (allCards.size + 4) / 5 // Show 5 per row, adapt as needed
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        for (row in 0 until rows) {
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                val thisRow = allCards.drop(row * 5).take(5)
+                thisRow.forEach { item ->
+                    if (item is Int) {
+                        StartNumberCard(item)
+                    } else if (item is MemoryCard) {
+                        Box(
+                            modifier = Modifier
+                                .size(44.dp)
+                                .clip(RoundedCornerShape(6.dp))
+                                .background(Color.Black.copy(alpha = 0.94f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = when (item.op) {
+                                    Op.ADD -> "+${item.value}"
+                                    Op.SUB -> "-${item.value}"
+                                    Op.MUL -> "×${item.value}"
+                                    Op.DIV -> "÷${item.value}"
+                                },
+                                color = textColor,
+                                style = MaterialTheme.typography.bodyLarge
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
 
 
 @Composable
@@ -811,89 +1090,6 @@ fun AnswerOptionsColumn(
 //    }
 //}
 
-
-@Composable
-fun ResultSection(
-    isCorrect: Boolean,
-    onNext: () -> Unit,
-    onRetry: () -> Unit,
-    textColor: Color,
-    buttonColor: Color,
-    buttonTextColor: Color,
-    streak: Int,
-    bestStreak: Int,
-    xp: Int,
-    coins: Int,
-    totalXp: Int,
-    totalCoin: Int
-) {
-    val color = if (isCorrect) Color(0xFF4CAF50) else Color(0xFFD32F2F)
-    val message = if (isCorrect) "🎉 Correct!" else "Try Again!"
-
-
-
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color.White),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 8.dp),
-            horizontalArrangement = Arrangement.End,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            // Total XP
-            AnimatedStatCounter(value = totalXp, label = "XP", color = Color(0xFFFFD700))
-            Spacer(modifier = Modifier.width(12.dp))
-            AnimatedStatCounter(value = totalCoin, label = "Coins", color = Color(0xFFFF9800))
-
-        }
-        Text(
-            text = message,
-            color = color,
-            style = MaterialTheme.typography.headlineMedium
-        )
-        Spacer(Modifier.height(10.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-            StatChip(label = "Streak", value = streak)
-            StatChip(label = "Best", value = bestStreak)
-            StatChip(label = "XP", value = xp)
-            StatChip(label = "Coins", value = coins)
-        }
-        Spacer(modifier = Modifier.height(16.dp))
-        if (isCorrect) {
-            Button(
-                onClick = onNext,
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = buttonColor,
-                    contentColor = buttonTextColor
-                ),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(48.dp)
-            ) {
-                Text("Next Level", color = textColor)
-            }
-        } else {
-            Button(
-                onClick = onRetry,
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = buttonColor,
-                    contentColor = buttonTextColor
-                ),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(48.dp)
-            ) {
-                Text("Restart", color = buttonTextColor)
-            }
-        }
-    }
-}
 
 @Composable
 fun AnimatedUnlockBanner(themeName: String, onContinue: () -> Unit) {
@@ -989,8 +1185,10 @@ fun ThemeSelector(
                     ) {
                         Text("🔒", color = Color.White)
                     }
+
             }
         }
     }
 }
 
+//prop improve layout of memorize

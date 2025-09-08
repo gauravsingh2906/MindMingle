@@ -1,5 +1,6 @@
 package com.futurion.apps.mindmingle.presentation.themes_screen
 
+import android.util.Log
 import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.SavedStateHandle
@@ -84,7 +85,7 @@ class ThemeViewModel @Inject constructor(
     val unlockableThemes = listOf(
         UnlockableTheme(Default[0], 1, 0),      // Default unlocked theme
         UnlockableTheme(Default[1], 5, 10),
-        UnlockableTheme(Default[2], 10, 500),
+        UnlockableTheme(Default[2], 10, 10),
         UnlockableTheme(Default[3], 20, 800),
         UnlockableTheme(Default[4], 30, 1200)
     )
@@ -114,16 +115,21 @@ class ThemeViewModel @Inject constructor(
         userId?.let {
             val profile = statsRepo.getProfile(it)
 
+            _unlockedThemes.value = (profile?.unlockedThemes?.toSet()?.ifEmpty { _unlockedThemes.value.plus(Default[0].name) } ?: Default[0].name) as Set<String>
+            Log.d("ThemeViewModel", " first Unlocked themes: ${_unlockedThemes.value}")
             // Load unlocked themes from profile (fallback to default theme)
-            _unlockedThemes.value = profile?.unlockedThemes?.toSet() ?: setOf(Default[0].name)
+          //  _unlockedThemes.value =  profile?.unlockedThemes?.toSet() ?: setOf(Default[0].name)
+
+            Log.d("ThemeViewModel", "Unlocked themes: ${_unlockedThemes.value}")
 
             // Load user coins
             _userCoins.value = profile?.coins ?: 0
 
             // Select currently selected theme or default one
-            val selected = profile?.selectedThemeName?.let { // You can modify this logic to load saved theme
-                unlockableThemes.find { it.theme.name == Default[0].name } // fallback to default theme object
+            val selected = profile?.selectedThemeName?.let { selectedName ->
+                unlockableThemes.find { it.theme.name == selectedName }
             } ?: unlockableThemes[0]
+
 
             _selectedTheme.value = ThemeSelectionState(selected.theme, isLocked = false)
 
@@ -154,15 +160,31 @@ class ThemeViewModel @Inject constructor(
         return false
     }
 
+//    fun selectTheme(themeName: String) {
+//        val theme = unlockableThemes.find { it.theme.name == themeName } ?: return
+//        val isLocked = !unlockedThemes.value.contains(themeName)
+//        _selectedTheme.value = ThemeSelectionState(theme.theme, isLocked)
+//
+//        // Persist selected theme if unlocked
+//        if (!isLocked) {
+//            viewModelScope.launch {
+//                val profile = statsRepo.getProfile(userId ?: "342")
+//                if (profile != null) {
+//                    val updated = profile.copy(selectedThemeName = themeName)
+//                    statsRepo.updateProfile(updated)
+//                }
+//            }
+//        }
+//    }
+
     fun selectTheme(themeName: String) {
         val theme = unlockableThemes.find { it.theme.name == themeName } ?: return
         val isLocked = !unlockedThemes.value.contains(themeName)
         _selectedTheme.value = ThemeSelectionState(theme.theme, isLocked)
-
         // Persist selected theme if unlocked
         if (!isLocked) {
             viewModelScope.launch {
-                val profile = statsRepo.getProfile(userId ?: "342")
+                val profile = statsRepo.getProfile(userId ?: "default")
                 if (profile != null) {
                     val updated = profile.copy(selectedThemeName = themeName)
                     statsRepo.updateProfile(updated)
@@ -170,6 +192,7 @@ class ThemeViewModel @Inject constructor(
             }
         }
     }
+
 }
 
 data class ThemeSelectionState(

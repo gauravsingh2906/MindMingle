@@ -70,7 +70,7 @@ class SudokuViewModel @Inject constructor(
     private val games = gameItems // Your sampleGames list
 
     fun getGameById(id: String): GameGridItem? {
-        return games.find { it.id == id }
+        return games.find { it.id==id }
     }
 
 

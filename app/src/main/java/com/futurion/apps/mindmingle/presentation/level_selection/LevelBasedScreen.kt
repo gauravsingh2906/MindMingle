@@ -16,8 +16,10 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
@@ -51,7 +53,9 @@ fun LevelBasedScreen(
         5 to "🎁",
         10 to "⭐",
         14 to "🔥",
-        20 to "💎"
+        20 to "💎",
+        28 to "💎",
+        35 to "💎",
     ),
 ) {
     val totalLevels = Int.MAX_VALUE // infinite levels (technically limited by Int)
@@ -62,6 +66,8 @@ fun LevelBasedScreen(
             .fillMaxSize()
             .background(Color.Black)
             .padding(16.dp)
+            .systemBarsPadding()
+            .navigationBarsPadding()
     ) {
 
         Text(
@@ -83,7 +89,7 @@ fun LevelBasedScreen(
                 val hasReward = rewardLevels.containsKey(levelNumber)
 
                 val backgroundColor = when {
-                    hasReward -> Color(0xFF4444AA) // Special color for reward levels
+                    hasReward -> if (!unlocked) Color(0xFF4444AA) else Color.DarkGray// Special color for reward levels
                     unlocked -> Color.DarkGray
                     else -> Color.Gray.copy(alpha = 0.4f)
                 }

@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -51,6 +52,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.futurion.apps.mindmingle.R
 import com.futurion.apps.mindmingle.domain.model.Difficulty
 import com.futurion.apps.mindmingle.domain.state.SudokuState
 import com.futurion.apps.mindmingle.presentation.utils.BebasNeueFont
@@ -60,6 +62,7 @@ import com.futurion.apps.mindmingle.presentation.utils.Resources
 import com.futurion.apps.mindmingle.presentation.utils.Surface
 import com.futurion.apps.mindmingle.presentation.utils.TextPrimary
 import com.futurion.apps.mindmingle.presentation.utils.TextPrimary1
+import java.nio.file.WatchEvent
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -207,26 +210,39 @@ fun SudokuScreen(
                 }
             )
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.Center,
-                verticalAlignment = Alignment.CenterVertically
+            Column(
+                modifier = Modifier.align(Alignment.End).padding(end = 24.dp),
+                horizontalAlignment = Alignment.End,
+                verticalArrangement = Arrangement.Center,
             ) {
-                OutlinedButton(
-                    onClick = { onAction(SudokuAction.UseHint) },
-                    enabled = state.hintsUsed < 3,
-                    modifier = Modifier
-                        .padding(8.dp)
-                ) {
-                    Icon(Icons.Default.Build, contentDescription = "Hint")
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text("Hint (${3 - state.hintsUsed} left)")
-                }
-
-                TextButton(onClick = onHint) { Text("💡 Hint") }
+                HintButton(
+                    hintsLeft = 3 - state.hintsUsed,
+                    onHint = { onAction(SudokuAction.UseHint) }, // use regular hint
+                    onWatchAd = onHint // callback to show rewarded ad dialog/screen
+                )
+                Text(text = "Hint", textAlign = TextAlign.Center)
             }
 
 
+
+//            Row(
+//                modifier = Modifier.fillMaxWidth(),
+//                horizontalArrangement = Arrangement.Center,
+//                verticalAlignment = Alignment.CenterVertically
+//            ) {
+//                OutlinedButton(
+//                    onClick = { onAction(SudokuAction.UseHint) },
+//                    enabled = state.hintsUsed < 3,
+//                    modifier = Modifier
+//                        .padding(8.dp)
+//                ) {
+//                    Icon(Icons.Default.Build, contentDescription = "Hint")
+//                    Spacer(modifier = Modifier.width(6.dp))
+//                    Text("Hint (${3 - state.hintsUsed} left)")
+//                }
+//
+//                TextButton(onClick = onHint) { Text("💡 Hint") }
+//            }
 
 
         }
@@ -234,6 +250,68 @@ fun SudokuScreen(
 
 
 }
+
+@Composable
+fun HintButton(
+    hintsLeft: Int,
+    onHint: () -> Unit,
+    onWatchAd: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Box(modifier = modifier.size(48.dp)) { // container size for icon + badge
+        IconButton(
+            onClick = if (hintsLeft > 0) onHint else onWatchAd,
+            modifier = Modifier.fillMaxSize().border(width = 1.dp, color = Color.Yellow, shape = CircleShape)
+        ) {
+            Icon(
+                painter = painterResource(Resources.Icon.Hint),
+                contentDescription = if (hintsLeft > 0) "Hint" else "Watch ad for hint",
+                tint = Color(0xFFFFEB3B), // yellow bulb
+                modifier = Modifier.size(36.dp)
+            )
+        }
+
+        if (hintsLeft > 0) {
+            Box(
+                modifier = Modifier
+                    .size(20.dp)
+                    .align(Alignment.TopEnd)
+                    .offset(x = 4.dp, y = (-4).dp)
+                    .background(Color(0xFF2196F3), shape = CircleShape), // blue badge circle
+                contentAlignment = Alignment.Center
+            ) {
+
+                Text(
+                    text = hintsLeft.toString(),
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 12.sp,
+                    lineHeight = 12.sp,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.padding(bottom = 1.dp)
+                )
+
+            }
+        } else {
+            Box(
+                modifier = Modifier
+                    .size(20.dp)
+                    .align(Alignment.TopEnd)
+                    .offset(x = 4.dp, y = (-4).dp)
+                    .background(Color(0xFF4CAF50), shape = CircleShape), // green badge circle
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    painter = painterResource(Resources.Icon.VideoPlay),
+                    contentDescription = "Watch Ad",
+                    tint = Color.White,
+                    modifier = Modifier.size(14.dp)
+                )
+            }
+        }
+    }
+}
+
 
 @Composable
 fun SudokuBoard(

@@ -1,39 +1,78 @@
 package com.futurion.apps.mindmingle.presentation.games
 
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.futurion.apps.mindmingle.R
 import com.futurion.apps.mindmingle.domain.model.GameItem
 import com.futurion.apps.mindmingle.domain.model.GameTheme
+import com.futurion.apps.mindmingle.presentation.profile.StatsViewModel
 
 object SampleGames {
+
 
     val gameItems = listOf(
         GameGridItem(
             name = "Sudoku",
             description = "Sharpen your mind with logic puzzles",
+            aboutGame = "Sudoku sharpens your logical thinking and concentration by challenging you to fill a 9x9 grid with numbers without repeats in rows, columns, or blocks. It’s a fun brain workout that boosts memory, patience, and problem-solving skills.",
             imageResId = R.drawable.figma_sudoku,
             cardColor = Color(0xFF56CCF2), // Light Blue
             xp = 1200,
-            coins = 500,
-            id = "sudoku"
+            coins = listOf(
+                "Earn coins by winning Sudoku games—higher difficulties give more coins",
+                "Win 3 consecutive games to get a bonus coin",
+                "Complete a game in 5 minutes to get a bonus coin"
+            ),
+            id = "sudoku",
+            steps = listOf(
+                "The goal is to fill every empty square with numbers 1 to 9.",
+                "Each row, column, and 3x3 box must contain all numbers from 1 to 9 without any repeats.",
+                "Some numbers are already filled in as clues — use these to help you.",
+                "Use logic to figure out where each number can go—no guessing!"
+            ),
+            isComingSoon = false
         ),
         GameGridItem(
             name = "Math Memory",
             description = "Boost your memory and math skills",
+            aboutGame = "Boost your memory and mental math skills by applying sequential math steps accurately. This game sharpens your focus, calculation, and cognitive agility in a fun and challenging way.",
             imageResId = R.drawable.fourthone,
             cardColor = Color(0xFF6A0572), // Purple
             xp = 1500,
-            coins = 700,
+            coins = listOf(
+                "Earn coins by beating your previous best streak",
+                "Get bonus coins for achieving a streak greater than 3"
+            ),
             id = "math_memory",
+            steps = listOf(
+                "The game shows a starting number that you must remember",
+                "Next, a sequence of math operations (like +2, -1, ×3) appears one after another.",
+                "Your task is to apply these math steps in order, from left to right, starting with the initial number.",
+                "The game challenges your memory and math calculation skills by increasing the length and complexity of steps."
+            ),
+            isComingSoon = false,
         ),
         GameGridItem(
-            name = "Algebra Quest",
+            name = "Algebra Adventure",
             description = "Master algebra through fun challenges",
             imageResId = R.drawable.fourthone,
             cardColor = Color(0xFFEF476F), // Pinkish Red
             xp = 900,
-            coins = 400,
+            coins = listOf(
+                "Earn coins by beating your previous best streak",
+                "Get bonus coins for achieving a streak greater than 3",
+                "Earn coins by reaching a reward levels in the game"
+            ),
             id = "algebra",
+            aboutGame = "Train your algebra skills with a variety of math challenges including missing numbers, operators, true/false expressions, and more. This game builds your problem-solving and critical thinking in an engaging, step-by-step way",
+            steps = listOf(
+                "Read the algebra question carefully—it could ask for a missing number, missing operator, or whether an expression is true or false",
+                "Choose or input the correct answer based on the question type",
+                "Think through the math operations step-by-step to solve the problem accurately",
+                "Answer within the time limit to progress and improve your skills."
+            ),
+            isComingSoon = false,
         ),
         GameGridItem(
             name = "New Game 1",
@@ -41,9 +80,11 @@ object SampleGames {
             imageResId = R.drawable.fourthone,
             cardColor = Color.Black,
             xp = 0,
-            coins = 0,
+            coins = listOf(),
             isComingSoon = true,
-            id = "4"
+            id = "4",
+            aboutGame = "",
+            steps = listOf()
         ),
         GameGridItem(
             name = "New Game 2",
@@ -51,9 +92,11 @@ object SampleGames {
             imageResId = R.drawable.fourthone,
             cardColor = Color.Black,
             xp = 0,
-            coins = 0,
+            coins = listOf(),
             isComingSoon = true,
-            id = "5"
+            id = "5",
+            aboutGame = "",
+            steps = listOf()
         )
     )
 
@@ -96,16 +139,19 @@ object SampleGames {
     val Default = listOf(
         GameTheme(
             name = "Classic",
-            backgroundImage = R.drawable.theme1,
-            textColor = Color.Black,
+            backgroundImage = R.drawable.theme_ocean_waves,
+            textColor = Color.White,
             buttonColor = Color(0xFFE0E0E0),
             buttonTextColor = Color.Black,
+            accentColor = Color(0xFFFFC107), // Yellow highlight
+            overlayColor = Color.Black.copy(alpha = 0.25f),
+            fontWeight = FontWeight.Bold
         ),
         GameTheme(
             name = "Nature",
-            backgroundImage = R.drawable.secondone,
-            textColor = Color.Black,
-            buttonColor = Color(0xFF388E3C),
+            backgroundImage = R.drawable.city_skyline_portrait,
+            textColor = Color.White,
+            buttonColor = Color(0xFF3DB2FF),
             buttonTextColor = Color.White
         ),
         GameTheme(

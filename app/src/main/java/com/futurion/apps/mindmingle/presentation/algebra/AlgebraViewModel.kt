@@ -56,6 +56,9 @@ class AlgebraViewModel @Inject constructor(
     private val _bestScore = MutableStateFlow(0)
     val bestScore: StateFlow<Int> = _bestScore
 
+    private val _coinsEarned = MutableStateFlow(0)
+    val coinsEarned: StateFlow<Int> = _coinsEarned
+
     private val _gameOver = MutableStateFlow(false)
     val gameOver: StateFlow<Boolean> = _gameOver
 
@@ -85,7 +88,8 @@ class AlgebraViewModel @Inject constructor(
         5 to 20,   // 20 coins at level 5
         10 to 40,  // 40 coins at level 10
         18 to 60,   // 60 coins at level 18
-        25 to 100
+        25 to 80,
+        30 to 100
     )
 
 
@@ -120,6 +124,8 @@ class AlgebraViewModel @Inject constructor(
     //happen on click
     fun markLevelCompleted() {
         _levelCompleted.value = true
+
+
         unlockNextLevelIfNeeded()
     }
 
@@ -323,16 +329,24 @@ class AlgebraViewModel @Inject constructor(
             }
             endGame()
         } else if ((_score.value / 100) > _level.value) {
+
             markLevelCompleted()
 
-            val coinsEarned = rewardLevels[currentLevel] ?: 0
 
-            _currentStreak.value += 1
-            Log.d("Streak", _currentStreak.value.toString())
-            if (_currentStreak.value >= _bestStreak.value) {
-                _bestStreak.value = _currentStreak.value
-            }
-            Log.d("Best Streak", _bestStreak.value.toString())
+
+            _currentStreak.value = _currentStreak.value + 1
+            _bestStreak.value = maxOf(_bestStreak.value, _currentStreak.value)
+
+            Log.d("Streak", "Current streak: ${_currentStreak.value}")
+            Log.d("Streak", "Best streak: ${_bestStreak.value}")
+
+
+             _coinsEarned.value = if (_currentStreak.value>=2) {
+                 30
+             } else {
+                 rewardLevels[currentLevel] ?:0
+             }
+
 
             _gameResult.value = GameResult(
                 level = currentLevel,
@@ -363,11 +377,11 @@ class AlgebraViewModel @Inject constructor(
                     xpGained = xp,
                     hintsUsed = _hintsUsed.value,
                     timeSpentSeconds = _time.value.toLong(),
-                    coinsEarned = coinsEarned,
+                    coinsEarned = _coinsEarned.value,
                     currentStreak = _currentStreak.value,
                     bestStreak = _bestStreak.value,
                     eachGameXp = xp,
-                    eachGameCoin = coinsEarned,
+                    eachGameCoin = _coinsEarned.value,
                     resultTitle = "Congratulations",
                     resultMessage = "Beat your own best streak to earn coins",
                     isMatchWon = true,

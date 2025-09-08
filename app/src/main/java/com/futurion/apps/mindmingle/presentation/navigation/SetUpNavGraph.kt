@@ -20,7 +20,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.DefaultAlpha
 import androidx.compose.ui.platform.LocalContext
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
@@ -32,9 +31,7 @@ import androidx.navigation.toRoute
 import com.futurion.apps.mindmingle.GoogleRewardedAdManager
 import com.futurion.apps.mindmingle.data.local.entity.OverallProfileEntity
 import com.futurion.apps.mindmingle.domain.model.AllGames
-import com.futurion.apps.mindmingle.domain.model.AnswerOption
 import com.futurion.apps.mindmingle.domain.model.Difficulty
-import com.futurion.apps.mindmingle.domain.model.MemoryCard
 import com.futurion.apps.mindmingle.domain.model.UniversalResult
 import com.futurion.apps.mindmingle.domain.state.SudokuState
 import com.futurion.apps.mindmingle.presentation.algebra.AlgebraGameScreen
@@ -44,13 +41,11 @@ import com.futurion.apps.mindmingle.presentation.algebra.AlgebraViewModel
 import com.futurion.apps.mindmingle.presentation.game_detail.GameDetailScreen
 import com.futurion.apps.mindmingle.presentation.game_result.GameResultScreen
 import com.futurion.apps.mindmingle.presentation.game_result.GameResultViewModel
-import com.futurion.apps.mindmingle.presentation.games.SampleGames.Default
 import com.futurion.apps.mindmingle.presentation.home.HomeGraphScreen
 import com.futurion.apps.mindmingle.presentation.level_selection.LevelBasedScreen
 import com.futurion.apps.mindmingle.presentation.level_selection.LevelSelectionViewModel
 import com.futurion.apps.mindmingle.presentation.math_memory.MathMemoryAction
 import com.futurion.apps.mindmingle.presentation.math_memory.MathMemoryScreen
-import com.futurion.apps.mindmingle.presentation.math_memory.MathMemoryScreenV2
 import com.futurion.apps.mindmingle.presentation.math_memory.MathMemoryViewModel
 import com.futurion.apps.mindmingle.presentation.profile.StatsViewModel
 import com.futurion.apps.mindmingle.presentation.sudoku.SudokuGameEvent
@@ -59,9 +54,8 @@ import com.futurion.apps.mindmingle.presentation.sudoku.SudokuViewModel
 import com.futurion.apps.mindmingle.presentation.sudoku.sudoku_history.SavedSudokuResultsScreen
 import com.futurion.apps.mindmingle.presentation.themes_screen.ThemeUnlockScreen
 import com.futurion.apps.mindmingle.presentation.themes_screen.ThemeViewModel
-import kotlin.div
-import kotlin.text.get
-import kotlin.text.toLong
+import com.futurion.apps.mindmingle.presentation.utils.Constants
+import kotlinx.coroutines.delay
 
 @RequiresApi(Build.VERSION_CODES.VANILLA_ICE_CREAM)
 @Composable
@@ -89,10 +83,14 @@ fun SetUpNavGraph(
 //        }
 
         composable<Screen.HomeGraph> {
+
+            val statsViewModel: StatsViewModel = hiltViewModel()
+
             HomeGraphScreen(
                 navigateToGameDetail = {
                     navController.navigate(Screen.GameDetailScreen(it))
                 },
+                coins = statsViewModel.profile.value?.coins.toString()
             )
         }
 
@@ -103,20 +101,36 @@ fun SetUpNavGraph(
 
             val statsViewModel: StatsViewModel = hiltViewModel()
 
+            val state = sudokuViewModel.state.value
+
+            val cp = statsViewModel.profile.value?.currentLevelXP
+
+            val coins = statsViewModel.profile.value?.coins
+
+
             val game = sudokuViewModel.getGameById(id)
+
+            val xp = statsViewModel.perGameStats.value.forEach { it ->
+                if (it.gameName == "Sudoku") {
+                    val po = it.xp
+                }
+            }
+
+
 
             GameDetailScreen(
                 gameTitle = game?.name ?: "",
                 gameSubtitle = game?.description ?: "",
-                xpReward = 4,
-                coinsReward = 3,
-                knowledgeBadges = listOf("a", "b", "c"),
-                howToPlaySteps = listOf("a", "b", "c"),
+                xpReward = cp ?: 0,
+                coinsReward = coins ?: 0,
+                knowledgeBadges = listOf("amazing", "best", "corin"),
+                howToPlaySteps = game?.steps ?: listOf(),
                 howToPlayImages = listOf(
                     R.drawable.fourthone,
                     R.drawable.cat,
                     R.drawable.shopping_cart_image
                 ),
+                howToEarnCons = game?.coins ?: listOf(),
                 onStart = { difficulty ->
                     if (game?.id == "sudoku") {
                         navController.navigate(Screen.SudokuScreen(difficulty))
@@ -156,7 +170,7 @@ fun SetUpNavGraph(
 
             Log.d("Nav Level", maxUnlocked.toString())
 
-          //  val scaffoldState = rememberScaffoldState()
+            //  val scaffoldState = rememberScaffoldState()
             val coroutineScope = rememberCoroutineScope()
 
             LevelBasedScreen(
@@ -201,7 +215,8 @@ fun SetUpNavGraph(
                                 viewModel = viewModel,
                                 newViewModel = statsViewModel,
                                 navController = navController,
-                                difficulty = stringDifficulty
+                                difficulty = stringDifficulty,
+                                coins = calculateCoins(viewModel)
                             )
                         }
 
@@ -210,41 +225,48 @@ fun SetUpNavGraph(
                                 viewModel = viewModel,
                                 newViewModel = statsViewModel,
                                 navController = navController,
-                                difficulty = stringDifficulty
+                                difficulty = stringDifficulty,
+                                coins = calculateCoins(viewModel)
                             )
                         }
                     }
                 }
             }
             val activity = context as? Activity
-
+//            val adMobAdUnitId =
+//                "ca-app-pub-3940256099942544/5224354917"
 
             var showHint by remember { mutableStateOf(false) }
-            val googleAdManager = remember { GoogleRewardedAdManager(context) }
+            val googleAdManager = remember { GoogleRewardedAdManager(context, Constants.AD_Unit) }
             // Facebook ad manager
             //  val facebookAdManager = remember { FacebookRewardedAdManager(context) }
 
-            val adMobAdUnitId =
-                "ca-app-pub-3940256099942544/5224354917"         // Your AdMob rewarded ad unit
+            // Your AdMob rewarded ad unit
             val facebookPlacementId = "xxxxxxxx"               // Your FB placement ID
 
             SudokuScreen(
                 state = state.value,
                 onAction = viewModel::onAction,
                 onHint = {
-                    googleAdManager.loadRewardedAd(adMobAdUnitId) { loaded ->
-                        if (loaded && activity != null) {
-                            googleAdManager.showRewardedAd(
-                                activity,
-                                onUserEarnedReward = {
-                                    showHint = true
-                                  //  viewModel.useHint()
-                                    viewModel.rewardUserForAd()
-                                    Toast.makeText(context, "Use your hint now", Toast.LENGTH_SHORT).show()
-                                },
-                                onClosed = {}
-                            )
-                        }
+                    if (activity != null) {
+                        googleAdManager.showRewardedAd(
+                            activity,
+                            onUserEarnedReward = {
+                                showHint = true
+                                viewModel.rewardUserForAd()
+                                Toast.makeText(context, "Use your hint now", Toast.LENGTH_LONG)
+                                    .show()
+                            },
+                            onClosed = {
+                                if (!showHint) {
+                                    Toast.makeText(
+                                        context,
+                                        "Ad not ready, please try again.",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+                                }
+                            }
+                        )
                     }
 
                     //  viewModel.onAction(SudokuAction.UseHint)
@@ -257,7 +279,8 @@ fun SetUpNavGraph(
                         viewModel = viewModel,
                         newViewModel = statsViewModel,
                         navController = navController,
-                        difficulty = stringDifficulty
+                        difficulty = stringDifficulty,
+                        coins = calculateCoins(viewModel)
                     )
                 }
             )
@@ -294,6 +317,12 @@ fun SetUpNavGraph(
                     navController.navigateUp()
                 }
             )
+//            MathMemoryScreen(
+//                viewModel = viewModel,
+//                onExit = {
+//                    navController.navigateUp()
+//                }
+//            )
 //            MathMemoryScreenV2(
 //                startValue = 7,
 //                moves = listOf<MemoryCard>(),
@@ -320,9 +349,7 @@ fun SetUpNavGraph(
             val level = it.toRoute<Screen.AlgebraGameScreen>().level
 
 
-         //   val dailyMissionViewModel: DailyMissionViewModel = hiltViewModel()
-
-
+            //   val dailyMissionViewModel: DailyMissionViewModel = hiltViewModel()
 
 
             Log.d("Algebra Level", level.toString())
@@ -342,9 +369,15 @@ fun SetUpNavGraph(
                 onBack = {
                     navController.popBackStack()
                 },
-                naviagteToResultScreen = { universalResult->
-                    navController.currentBackStackEntry?.savedStateHandle?.set("resultData", universalResult)
-                    navController.currentBackStackEntry?.savedStateHandle?.set("currentLevel", level)
+                naviagteToResultScreen = { universalResult ->
+                    navController.currentBackStackEntry?.savedStateHandle?.set(
+                        "resultData",
+                        universalResult
+                    )
+                    navController.currentBackStackEntry?.savedStateHandle?.set(
+                        "currentLevel",
+                        level
+                    )
 
                     navController.navigate(Screen.CommonResultScreen)
                 }
@@ -355,7 +388,7 @@ fun SetUpNavGraph(
         composable<Screen.ThemeSelectionScreen> {
             val userId = it.toRoute<Screen.ThemeSelectionScreen>() ?: "3r3r"
 
-            val mathMemoryViewModel:MathMemoryViewModel = hiltViewModel()
+            val mathMemoryViewModel: MathMemoryViewModel = hiltViewModel()
 
             val themeViewModel: ThemeViewModel = hiltViewModel()
 
@@ -364,7 +397,11 @@ fun SetUpNavGraph(
                 onThemeSelected = { selectedTheme ->
                     Log.d("ThemeSelectionScreen", "Selected theme: $selectedTheme")
                     mathMemoryViewModel.onAction(MathMemoryAction.SelectTheme(selectedTheme))
+
+
                     navController.popBackStack()
+
+
                 }
             )
         }
@@ -379,10 +416,12 @@ fun SetUpNavGraph(
             val data = it.savedStateHandle.get<UniversalResult>("resultData")
 
 
+            val resultDatas =
+                navController.previousBackStackEntry?.savedStateHandle?.get<UniversalResult>("resultData")
 
-            val resultDatas = navController.previousBackStackEntry?.savedStateHandle?.get<UniversalResult>("resultData")
-
-            val gameTypeString = navController.previousBackStackEntry?.savedStateHandle?.get<String>("gameType") ?: "ALGEBRA"
+            val gameTypeString =
+                navController.previousBackStackEntry?.savedStateHandle?.get<String>("gameType")
+                    ?: "ALGEBRA"
 
             val gameType = when (gameTypeString) {
                 "SUDOKU" -> AllGames.SUDOKU
@@ -390,17 +429,23 @@ fun SetUpNavGraph(
                 else -> AllGames.ALGEBRA
             }
 
-            val currentDifficulty = navController.previousBackStackEntry?.savedStateHandle?.get<String>("currentDifficulty") ?: "Easy"
+            val currentDifficulty =
+                navController.previousBackStackEntry?.savedStateHandle?.get<String>("currentDifficulty")
+                    ?: "Easy"
 
-            Log.d(" Nav Result Data",resultDatas.toString())
+            Log.d(" Nav Result Data", resultDatas.toString())
 
-            val profileData = navController.previousBackStackEntry?.savedStateHandle?.get<OverallProfileEntity>("profileData")
+            val profileData =
+                navController.previousBackStackEntry?.savedStateHandle?.get<OverallProfileEntity>("profileData")
             val resultData = resultViewModel.resultState.collectAsState().value
 
-            val currentLevel = navController.previousBackStackEntry?.savedStateHandle?.get<Int>("currentLevel") ?: 1
-            Log.d("Nav Result Data",currentLevel.toString())
+            val currentLevel =
+                navController.previousBackStackEntry?.savedStateHandle?.get<Int>("currentLevel")
+                    ?: 1
+            Log.d("Nav Result Data", currentLevel.toString())
 
-            val highestLevel = navController.previousBackStackEntry?.savedStateHandle?.get<Int>("highestLevel")
+            val highestLevel =
+                navController.previousBackStackEntry?.savedStateHandle?.get<Int>("highestLevel")
             Log.d("Nav Result Data", "highest level: $highestLevel")
             if (resultDatas != null) {
 
@@ -418,10 +463,16 @@ fun SetUpNavGraph(
                     onReplay = { level, difficulty ->
                         navController.popBackStack()
                         when (gameType) {
-                            AllGames.ALGEBRA -> navController.navigate(Screen.AlgebraGameScreen(level = currentLevel))
+                            AllGames.ALGEBRA -> navController.navigate(
+                                Screen.AlgebraGameScreen(
+                                    level = currentLevel
+                                )
+                            )
+
                             AllGames.SUDOKU -> {
                                 navController.navigate("sudoku_screen?gameId=${"sudoku"}&difficulty=${difficulty}")
                             }
+
                             AllGames.MEMORY -> {
                                 viewModel.onAction(MathMemoryAction.ResetGame)
                                 navController.navigate(Screen.MathMemoryScreen(level = currentLevel))
@@ -456,9 +507,14 @@ fun SetUpNavGraph(
                             }
                         }
                     },
-                    navigateToMathMemory = { nextLevel->
-                        Log.d("Next Level",nextLevel.toString())
+                    navigateToMathMemory = { nextLevel ->
+                        Log.d("Next Level", nextLevel.toString())
                         navController.navigate(Screen.MathMemoryScreen(nextLevel))
+                    },
+                    navigateToGameDetail = {
+                        navController.navigate(Screen.GameDetailScreen(it)) {
+                            popUpTo(Screen.HomeGraph) { inclusive = false }
+                        }
                     }
                 )
             } else {
@@ -475,7 +531,6 @@ fun SetUpNavGraph(
         }
 
 
-
     }
 
 }
@@ -484,7 +539,8 @@ private fun handleSudokuWin(
     viewModel: SudokuViewModel,
     newViewModel: StatsViewModel,
     navController: NavController,
-    difficulty: String
+    difficulty: String,
+    coins: Int
 ) {
     val state = viewModel.state.value
 
@@ -511,7 +567,7 @@ private fun handleSudokuWin(
         xp = state.xpEarned,
         hints = state.hintsUsed,
         timeSec = state.elapsedTime.toLong(),
-        coins = if (viewModel.currentStreak.value >= 3) 20 else 0,
+        coins = coins,
         currentStreak = viewModel.currentStreak.value,
         bestStreak = viewModel.bestStreak.value,
         resultTitle = "🎉 EXCELLENT!",
@@ -526,6 +582,7 @@ private fun handleSudokuWin(
         navController = navController,
         state = state,
         difficulty = difficulty,
+        coins = coins,
         currentStreak = viewModel.currentStreak.value,
         bestStreak = viewModel.bestStreak.value,
         profileData = newViewModel.profile.value,
@@ -537,7 +594,8 @@ private fun handleSudokuLoss(
     viewModel: SudokuViewModel,
     newViewModel: StatsViewModel,
     navController: NavController,
-    difficulty: String
+    difficulty: String,
+    coins: Int
 ) {
     val state = viewModel.state.value
 
@@ -572,8 +630,9 @@ private fun handleSudokuLoss(
         difficulty = difficulty,
         currentStreak = viewModel.currentStreak.value,
         bestStreak = viewModel.bestStreak.value,
+        profileData = newViewModel.profile.value,
         isWin = false,
-        profileData = newViewModel.profile.value
+        coins = coins,
     )
 }
 
@@ -584,7 +643,8 @@ private fun navigateToSudokuResult(
     currentStreak: Int,
     bestStreak: Int,
     profileData: OverallProfileEntity?,
-    isWin: Boolean
+    isWin: Boolean,
+    coins: Int
 ) {
     // Create UniversalResult for Sudoku
     val universalResult = UniversalResult(
@@ -602,7 +662,7 @@ private fun navigateToSudokuResult(
         xpEarned = profileData?.currentLevelXP?.plus(state.xpEarned) ?: 0,
         eachGameXp = state.xpEarned,
         eachGameCoin = if (currentStreak >= 3) 20 else 0,
-        coinsEarned = profileData?.coins ?: 1,
+        coinsEarned = coins ?: 1,
         currentStreak = if (isWin) currentStreak + 1 else 0,
         bestStreak = if (isWin) bestStreak + 1 else bestStreak,
     )
@@ -615,4 +675,22 @@ private fun navigateToSudokuResult(
     }
 
     navController.navigate(Screen.CommonResultScreen)
+}
+
+fun calculateCoins(viewModel: SudokuViewModel): Int {
+    var totalCoins = 0
+    if (viewModel.currentStreak.value >= 3) {
+        totalCoins += 30       // Streak bonus
+    }
+    if (viewModel.state.value.isGameWon) {
+        totalCoins += when (viewModel.difficulty) {
+            Difficulty.EASY -> 5
+            Difficulty.MEDIUM -> 15
+            Difficulty.HARD -> 30
+        }
+    }
+    if (viewModel.state.value.elapsedTime < 5) {
+        totalCoins += 15       // Fast finish bonus
+    }
+    return totalCoins
 }

@@ -3,6 +3,7 @@ package com.futurion.apps.mindmingle.presentation.algebra
 
 import android.app.Activity
 import android.util.Log
+import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.ExperimentalAnimationApi
@@ -38,6 +39,7 @@ import com.futurion.apps.mindmingle.GoogleRewardedAdManager
 import com.futurion.apps.mindmingle.R
 import com.futurion.apps.mindmingle.domain.model.UniversalResult
 import com.futurion.apps.mindmingle.presentation.game_result.GameResultViewModel
+import com.futurion.apps.mindmingle.presentation.utils.Constants
 import com.google.codelab.gamingzone.presentation.games.algebra.Question
 import kotlinx.coroutines.delay
 
@@ -129,7 +131,7 @@ fun AlgebraGameScreen(
         }
     }
 
-    val googleAdManager = remember { GoogleRewardedAdManager(context) }
+    val adManager = remember { GoogleRewardedAdManager(context, Constants.AD_Unit) }
     // Facebook ad manager
     //  val facebookAdManager = remember { FacebookRewardedAdManager(context) }
 
@@ -229,7 +231,8 @@ fun AlgebraGameScreen(
     val total = (level + 1) * 100
 
     Box(
-        modifier = Modifier.fillMaxSize()
+        modifier = Modifier
+            .fillMaxSize()
 //            .padding(16.dp)
     ) {
 
@@ -244,6 +247,8 @@ fun AlgebraGameScreen(
                     )
                 )
                 .padding(12.dp)
+                .systemBarsPadding()
+                .navigationBarsPadding()
         ) {
             Column(
                 modifier = Modifier.fillMaxSize(),
@@ -261,6 +266,7 @@ fun AlgebraGameScreen(
                         .fillMaxWidth()
                         .padding(16.dp)
                 )
+
 
                 // ---------- Question Card ----------
                 Card(
@@ -368,23 +374,26 @@ fun AlgebraGameScreen(
                 // Bottom actions
                 BottomBar(
                     onHint = {
-                        //  feedback = "Hint: think step-by-step!"
-                        googleAdManager.loadRewardedAd(adMobAdUnitId) { loaded ->
-                            if (loaded && activity != null) {
-                                googleAdManager.showRewardedAd(
-                                    activity,
-                                    onUserEarnedReward = {
-                                        showHint = true
-                                        viewModel.useHint()
-                                    },
-                                    onClosed = {}
-                                )
-                            }
+                        if (activity != null) {
+                            adManager.showRewardedAd(
+                                activity,
+                                onUserEarnedReward = {
+                                    showHint = true
+                                    viewModel.useHint()
+                                },
+                                onClosed = {
+                                    // Optional: show a message if ad wasn’t ready
+                                    if (!showHint) {
+                                        Toast.makeText(context, "Ad not ready, please try again.", Toast.LENGTH_SHORT).show()
+                                    }
+                                }
+                            )
                         }
                     },
                     onRestart = { viewModel.startGame() },
                     onPause = { /* hook if you add pause modal */ }
                 )
+
             }
 
 
