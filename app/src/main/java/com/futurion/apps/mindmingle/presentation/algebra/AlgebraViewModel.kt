@@ -104,28 +104,9 @@ class AlgebraViewModel @Inject constructor(
     }
 
 
-    fun levelCompleted() {
-        viewModelScope.launch {
-
-            val currentMax =
-                levelRepository.getMaxUnlockedLevelOnce(gameId = "algebra")
-                    .first() // get latest value from flow
-            Log.d("Level", "Current max: $currentMax")
-            Log.d("Level", "Current level: $currentLevel")
-
-            if (currentLevel >= currentMax) {
-                levelRepository.unlockNextLevelIfNeeded(currentLevel, gameId = "algebra")
-            }
-
-        }
-    }
-
-
     //happen on click
     fun markLevelCompleted() {
         _levelCompleted.value = true
-
-
         unlockNextLevelIfNeeded()
     }
 
@@ -150,28 +131,8 @@ class AlgebraViewModel @Inject constructor(
     }
 
 
-//    init {
-//        viewModelScope.launch {
-//            gameRepository.getMaxUnlockedLevel().collect { level ->
-//                Log.d("Level",level.toString())
-//                _maxUnlockedLevel.value = level
-//            }
-//        }
-//    }
-
-    //happen on click
-//    fun completeLevel(currentLevel: Int) {
-//        if (currentLevel >= _maxUnlockedLevel.value) {
-//            val newLevel = currentLevel + 1
-//            _maxUnlockedLevel.value = newLevel
-//            viewModelScope.launch {
-//                gameRepository.updateMaxUnlockedLevel(newLevel)
-//            }
-//        }
-//    }
-
-
     fun startGame() {
+
         _score.value = 0
         _level.value = currentLevel
         _currentStreak.value = 0
@@ -179,13 +140,6 @@ class AlgebraViewModel @Inject constructor(
         _gameOver.value = false
         startNext()
     }
-
-
-//    fun startNext() {
-//        val nextQuestion = generateQuestionForLevel(_state.value.level)
-//        val newState = _state.value.copy(currentQuestion = nextQuestion)
-//        updateState(newState)
-//    }
 
 
     //  old one but important
@@ -209,9 +163,10 @@ class AlgebraViewModel @Inject constructor(
                 _timeRemaining.value--
             }
             if (_timeRemaining.value <= 0 && !_gameOver.value) {
-                // Time is up
+                Log.d("Time", "Time is up")
                 endGame(timeout = true)
             }
+
         }
     }
 
@@ -332,8 +287,6 @@ class AlgebraViewModel @Inject constructor(
 
             markLevelCompleted()
 
-
-
             _currentStreak.value = _currentStreak.value + 1
             _bestStreak.value = maxOf(_bestStreak.value, _currentStreak.value)
 
@@ -341,11 +294,11 @@ class AlgebraViewModel @Inject constructor(
             Log.d("Streak", "Best streak: ${_bestStreak.value}")
 
 
-             _coinsEarned.value = if (_currentStreak.value>=2) {
-                 30
-             } else {
-                 rewardLevels[currentLevel] ?:0
-             }
+            _coinsEarned.value = if (_currentStreak.value >= 2) {
+                30
+            } else {
+                rewardLevels[currentLevel] ?: 0
+            }
 
 
             _gameResult.value = GameResult(
@@ -423,14 +376,9 @@ class AlgebraViewModel @Inject constructor(
         timerJob?.cancel()
         timerJob = null
 
-        // 🔑 if result is already set (win/lose), don’t overwrite
-        if (_gameResult.value != null) {
-            _gameOver.value = true
-            return
-        }
 
         if (timeout) {
-            // 🔑 Timeout → auto lose
+            // Always override gameResult on timeout, even if non-null
             _gameResult.value = GameResult(
                 level = currentLevel,
                 won = false,
@@ -441,7 +389,39 @@ class AlgebraViewModel @Inject constructor(
                 hintsUsed = _hintsUsed.value,
                 timeSpent = _time.value.toLong()
             )
+            viewModelScope.launch {
+                val user = statsRepository.initUserIfNeeded()
+                statsRepository.updateGameResult(
+                    userId = user,
+                    gameName = "algebra",
+                    levelReached = currentLevel,
+                    won = false,
+                    xpGained = 0,
+                    hintsUsed = _hintsUsed.value,
+                    timeSpentSeconds = _time.value.toLong(),
+                    coinsEarned = 0,
+                    currentStreak = 0,
+                    bestStreak = _bestStreak.value,
+                    eachGameXp = 0,
+                    eachGameCoin = 0,
+                    resultTitle = "Time's Up!",
+                    resultMessage = "Try again!",
+                    isMatchWon = false
+                )
+                Log.d("EndGame", "Stats updated for timeout lose")
+            }
+
+
+            _gameOver.value = true
+            return
         }
+
+        // 🔑 if result is already set (win/lose), don’t overwrite
+        if (_gameResult.value != null) {
+            _gameOver.value = true
+            return
+        }
+
 
         _gameOver.value = true
     }

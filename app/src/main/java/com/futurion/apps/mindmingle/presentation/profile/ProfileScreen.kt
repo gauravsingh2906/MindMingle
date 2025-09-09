@@ -225,10 +225,7 @@ fun ProfileScreen(
             StatsRow("Total Games", profile.totalGamesPlayed)
             StatsRow("Total Wins 🏆", profile.totalWins)
             StatsRow("Total Losses ❌", profile.totalLosses)
-            StatsRow("Total XP ", profile.totalXP)
-        //    Text("Win %: ${win*100}")
-       //     Text(text = "is:31.32")
-        //    Text("Win %: ${(profile.totalWins/profile.totalGamesPlayed)*100}")
+            StatsRow("Total XP ", profile.totalXP)hi
             StatsRow("Highest Level 📈", profile.overallHighestLevel)
             StatsRow("Total Hints Used 💡", profile.totalHintsUsed)
             StatsRow("Time ⏱", "${profile.totalTimeSeconds / 60} min")

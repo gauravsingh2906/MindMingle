@@ -17,6 +17,8 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -82,13 +84,14 @@ fun AlgebraGameScreen(
         )
     }
 
+    // States from ViewModel
     val question by viewModel.question.collectAsState()
     val score by viewModel.score.collectAsState()
     val level by viewModel.level.collectAsState()
-    val timeLeft by viewModel.timeRemaining.collectAsState()
-    val isGameOver by viewModel.gameOver.collectAsState()
+    val timeRemaining by viewModel.timeRemaining.collectAsState()
+    val isGameOver by viewModel.gameOver.collectAsState()  //
     val levelCompleted by viewModel.levelCompleted.collectAsState()
-    val gameResult by viewModel.gameResult.collectAsState()
+    val gameResult by viewModel.gameResult.collectAsState() //
 
     val context = LocalContext.current
     val activity = context as? Activity
@@ -103,7 +106,13 @@ fun AlgebraGameScreen(
         Log.e("Game", isGameOver.toString() + "changes")
     }
 
+    // 🎵 SoundPool
     val soundPool = rememberSoundPool()
+//    val winSound = rememberSound(context, soundPool, R.raw.win_sound)
+//    val loseSound = rememberSound(context, soundPool, R.raw.lose_sound)
+//    val tickSound = rememberSound(context, soundPool, R.raw.tick_sound)
+
+    //  val soundPool = rememberSoundPool()
 
     val winSoundId = remember { soundPool.load(context, R.raw.game_completed, 1) }
     val loseSoundId = remember { soundPool.load(context, R.raw.game_over, 1) }
@@ -118,16 +127,26 @@ fun AlgebraGameScreen(
     var streamId by remember { mutableStateOf(0) }
     var isLoopPlaying by remember { mutableStateOf(false) }
 
-    LaunchedEffect(timeLeft) {
-        if (timeLeft in 1..5 && !isLoopPlaying) {
-            // Start the looping ticking sound once when entering last 3 seconds
-            streamId = soundPool.play(timer3SoundId, 1f, 1f, 1, -1, 1f)
-            isLoopPlaying = true
-        } else if ((timeLeft <= 0 || viewModel.gameOver.value) && isLoopPlaying) {
-            // Stop the looping sound when timer ends or game is over
-            soundPool.stop(streamId)
-            streamId = 0
-            isLoopPlaying = false
+//    LaunchedEffect(timeRemaining) {
+//        if (timeRemaining in 1..5 && !isLoopPlaying) {
+//            // Start the looping ticking sound once when entering last 3 seconds
+//            streamId = soundPool.play(timer3SoundId, 1f, 1f, 1, -1, 1f)
+//            isLoopPlaying = true
+//        } else if ((timeRemaining <= 0 || viewModel.gameOver.value) && isLoopPlaying) {
+//            // Stop the looping sound when timer ends or game is over
+//            soundPool.stop(streamId)
+//            streamId = 0
+//            isLoopPlaying = false
+//        }
+//    }
+    DisposableEffect(Unit) {
+        onDispose { soundPool.release() }
+    }
+
+
+    LaunchedEffect(timeRemaining) {
+        if (timeRemaining in 1..3) {
+            soundPool.play(timer3SoundId, 1f, 1f, 1, 0, 1f)
         }
     }
 
@@ -159,6 +178,15 @@ fun AlgebraGameScreen(
 //    LaunchedEffect(levelCompleted) {
 //        showAnimation = true
 //    }
+
+    LaunchedEffect(timeRemaining) {
+        if (timeRemaining <= 0) {
+            Log.d("TimeoutNavTest", "Timer zero, forcing navigation")
+            shouldLoadResult = true
+            shouldNavigate = true
+        }
+    }
+
 
 
 
@@ -192,8 +220,11 @@ fun AlgebraGameScreen(
                 //     gameResultModel.loadResult(viewModel.userId.value ?: "wew","algebra")
                 //  showResultDialog = true important
                 //   naviagteToResultScreen()
+                delay(3000)
                 shouldLoadResult = true
             }
+            shouldLoadResult = true
+            shouldNavigate = true
         }
     }
     LaunchedEffect(shouldLoadResult) {
@@ -257,7 +288,12 @@ fun AlgebraGameScreen(
 
                 // ---------- HUD ----------
                 GameHud(
-                    level = level, score = score, timeLeft = timeLeft, onBack = onBack
+                    level = level,
+                    score = score,
+                    timeLeft = timeRemaining,
+                    onBack = {
+                        showExitDialog = true
+                    }
                 )
 
                 LinearProgressIndicator(
@@ -449,59 +485,6 @@ fun AlgebraGameScreen(
             }
         }
 
-        if (showResultDialog && gameResult != null) {
-            val result = gameResult!!
-
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(Color.Black.copy(alpha = 0.5f)),
-                contentAlignment = Alignment.TopCenter
-            ) {
-                Column(
-                    modifier = Modifier.padding(top = 50.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Text("Score: ${result.score}", color = Color.White, fontSize = 20.sp)
-                    Text("XP +${result.xpEarned}", color = Color.Green, fontSize = 18.sp)
-                    Text("Streak: ${result.streak}", color = Color.Yellow, fontSize = 18.sp)
-                    Text("Best Streak: ${result.bestStreak}", color = Color.Cyan, fontSize = 18.sp)
-                }
-            }
-
-//            if (result.won) {
-//                LevelCompletedDialog(
-//                    level = level,
-//                    earnedScore = result.score,
-//                    onNextLevel = {
-//                        viewModel.levelCompleted()
-//                        viewModel.setLevel(level + 1)
-//                        viewModel.startGame()
-//                    },
-//                    onReplay = {
-//                        viewModel.setLevel(level)
-//                        viewModel.startGame()
-//                    },
-//                    onHome = {
-//                        viewModel.levelCompleted()
-//                        onBack()
-//                    },
-//                    onBack = onBack,
-//                    score = result.score,
-//                    xpEarned = result.xpEarned,
-//                    streak = result.streak,
-//                    bestStreak = result.bestStreak
-//                )
-//            } else {
-//                GameOverDialog(
-//                    level = level,
-//                    score = result.score,
-//                    bestScore = null,
-//                    onRetry = { viewModel.startGame() },
-//                    onHome = onBack
-//                )
-//            }
-        }
     }
 
 }
@@ -546,7 +529,7 @@ fun GameWinAnimation(
 @OptIn(ExperimentalAnimationApi::class)
 @Composable
 private fun GameHud(
-    level: Int, score: Int, timeLeft: Int, onBack: () -> Unit
+    level: Int, score: Int, timeLeft: Int, onBack: () -> Unit,
 ) {
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
 
@@ -554,7 +537,15 @@ private fun GameHud(
         Row(
             Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically
         ) {
-            TextButton(onClick = onBack) { Text("← Back") }
+            IconButton(
+                onClick = onBack
+
+            ) {
+                Icon(
+                    imageVector = Icons.Default.ArrowBack,
+                    contentDescription = null
+                )
+            }
 
             Text(
                 "Algebra Quest",
@@ -633,7 +624,7 @@ private fun MissingNumberCard(
 ) {
     val context = LocalContext.current
     val soundPool = rememberSoundPool()
-    val clickSound = remember { soundPool.load(context, R.raw.click_sound, 1) }
+    val clickSound = remember { soundPool.load(context, R.raw.win_sound, 1) }
     Column(
         Modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(16.dp),
