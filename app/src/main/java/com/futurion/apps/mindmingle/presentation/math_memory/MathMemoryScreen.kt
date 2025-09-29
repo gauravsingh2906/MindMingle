@@ -3,6 +3,7 @@ package com.futurion.apps.mindmingle.presentation.math_memory
 import android.annotation.SuppressLint
 import android.app.Activity
 import android.widget.Toast
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearOutSlowInEasing
@@ -38,6 +39,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountBox
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -48,6 +50,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -97,6 +100,7 @@ import java.time.format.TextStyle
 
 private enum class TutorialPhase { WELCOME, MEMORIZE, SOLVE, RESULT }
 
+
 @SuppressLint("StateFlowValueCalledInComposition")
 @Composable
 fun MathMemoryScreen(
@@ -118,6 +122,14 @@ fun MathMemoryScreen(
     var tutPhase by remember(uiState.game.level.number) {
         mutableStateOf(if (uiState.game.level.number == 1) TutorialPhase.WELCOME else TutorialPhase.RESULT)
     }
+
+    var showExitDialog by remember { mutableStateOf(false) }
+
+    BackHandler {
+        showExitDialog = true
+    }
+
+
 
     LaunchedEffect(uiState.game.level, uiState.game.isShowCards) {
         if (uiState.game.isShowCards) {
@@ -167,6 +179,36 @@ fun MathMemoryScreen(
         }
     }
 
+    if (showExitDialog) {
+        AlertDialog(
+            onDismissRequest = { showExitDialog = false },
+            title = { Text("Exit Game") },
+            text = { Text("Are you sure you want to exit? Your progress will be saved to resume later.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    showExitDialog = false
+                    viewModel.onLevelResultAndSaveStats(
+                        userId = statsViewModel.userId.value ?: "123",
+                        isCorrect = isCorrect,
+                        hintsUsed = viewModel.hintsUsed.value,
+                        timeSpentSeconds = 1,
+                        coinsEarned = coinsEarned,
+                        currentStreak = viewModel.currentStreak.value,
+                        bestStreak = viewModel.bestStreak.value,
+                    )
+                    navigateToGames()
+                }) {
+                    Text("Yes")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showExitDialog = false }) {
+                    Text("No")
+                }
+            }
+        )
+    }
+
 
     Box(
         modifier = Modifier
@@ -206,29 +248,36 @@ fun MathMemoryScreen(
                         .padding(horizontal = 20.dp, vertical = 14.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    ThemeSelector(
-                        builtInThemes = Default,
-                        selectedTheme = theme,
-                        unlockedNames = uiState.theme.unlockedThemes,
-                        onSelect = { viewModel.onAction(MathMemoryAction.SelectTheme(it)) }
-                    )
 
-                    Box(
-                        Modifier
-                            .clickable(onClick = { navigateToThemeUnlock(userId) })
-                            .background(
-                                shape = CircleShape,
-                                color = Color.White
-                            ),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        IconButton(onClick = { navigateToThemeUnlock(userId) }) {
-                            Icon(
-                                imageVector = Icons.Default.Home,
-                                contentDescription = "Unlock Theme"
-                            )
+                        ThemeSelector(
+                            builtInThemes = Default,
+                            selectedTheme = theme,
+                            unlockedNames = uiState.theme.unlockedThemes,
+                            onSelect = { viewModel.onAction(MathMemoryAction.SelectTheme(it)) }
+                        )
+
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            contentAlignment = Alignment.Center // Top right
+                        ) {
+                            IconButton(
+                                onClick = { navigateToThemeUnlock(userId) },
+                                modifier = Modifier
+                                    .size(48.dp)
+                                    .background(Color.White.copy(alpha = 0.9f), CircleShape)
+                                    .border(1.dp, Color.Gray, CircleShape)
+                            ) {
+                                Icon(
+                                    painter = painterResource(R.drawable.theme), // Replace with your theme icon
+                                    contentDescription = "Theme Selector",
+                                    tint = Color(0xFF6A8BFF)
+                                )
+                            }
                         }
-                    }
+
+
 
 
 
@@ -280,11 +329,6 @@ fun MathMemoryScreen(
                                     modifier = Modifier.padding(bottom = 12.dp)
                                 )
 
-//                                StartNumberBox(
-//                                    value = uiState.game.level.start,
-//                                    textColor = theme.buttonTextColor,
-//                                    bgColor = theme.buttonColor
-//                                )
 
                                 Spacer(Modifier.height(16.dp))
 
@@ -425,7 +469,11 @@ fun MathMemoryScreen(
                                                     },
                                                     onClosed = {
                                                         if (!secondChanceUsed) {
-                                                            Toast.makeText(context, "Ad not ready, please try again.", Toast.LENGTH_SHORT).show()
+                                                            Toast.makeText(
+                                                                context,
+                                                                "Ad not ready, please try again.",
+                                                                Toast.LENGTH_SHORT
+                                                            ).show()
                                                         }
                                                     }
                                                 )
@@ -564,6 +612,10 @@ fun ResultFullScreen(
         isVisible = true
     }
 
+    BackHandler {
+        navigateToGames()
+    }
+
     Box(
         Modifier
             .fillMaxSize()
@@ -694,7 +746,7 @@ fun ResultFullScreen(
                     ) {
                         Image(
                             painter = if (isCorrect) painterResource(R.drawable.figma_trophy) else painterResource(
-                                R.drawable.weight
+                                R.drawable.warning
                             ),
                             contentDescription = "Trophy",
                             modifier = Modifier.size(40.dp)
@@ -839,54 +891,6 @@ fun StatChip(label: String, value: Int) {
 
 
 @Composable
-fun AnimatedStatCounter(
-    value: Int,
-    label: String,
-    color: Color = Color(0xFFFFD700)
-) {
-    val animatedValue by animateIntAsState(
-        targetValue = value,
-        animationSpec = tween(durationMillis = 800, easing = LinearOutSlowInEasing)
-    )
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(
-            text = label,
-            color = Color.Gray,
-            fontWeight = FontWeight.Bold,
-            fontSize = 14.sp
-        )
-        Text(
-            text = animatedValue.toString(),
-            color = color,
-            fontWeight = FontWeight.Bold,
-            fontSize = 32.sp
-        )
-    }
-}
-
-// Keep your StatChip composable from your current code unchanged
-
-
-// The following can be outside or in separate file ----------------------------------
-@Composable
-fun StartNumberCircle(value: Int, textColor: Color, bgColor: Color) {
-    Box(
-        modifier = Modifier
-            .size(72.dp)
-            .clip(CircleShape)
-            .background(bgColor)
-            .border(3.dp, textColor, CircleShape),
-        contentAlignment = Alignment.Center
-    ) {
-        Text(
-            text = value.toString(),
-            color = textColor,
-            style = MaterialTheme.typography.headlineLarge
-        )
-    }
-}
-
-@Composable
 private fun StatBadge(
     icon: Painter,
     iconColor: Color,
@@ -931,38 +935,6 @@ private fun StatBadge(
     }
 }
 
-
-@Composable
-fun CardsRow(cards: List<MemoryCard>, textColor: Color) {
-    val rows = (cards.size + 4) / 5 // Show 5 per row, adapt as needed
-    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        for (row in 0 until rows) {
-            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                val thisRow = cards.drop(row * 5).take(5)
-                thisRow.forEach { card ->
-                    Box(
-                        modifier = Modifier
-                            .size(44.dp)
-                            .clip(RoundedCornerShape(6.dp))
-                            .background(Color.Black.copy(alpha = 0.94f)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = when (card.op) {
-                                Op.ADD -> "+${card.value}"
-                                Op.SUB -> "-${card.value}"
-                                Op.MUL -> "×${card.value}"
-                                Op.DIV -> "÷${card.value}"
-                            },
-                            color = textColor,
-                            style = MaterialTheme.typography.bodyLarge
-                        )
-                    }
-                }
-            }
-        }
-    }
-}
 
 @Composable
 fun CardsRow1(
@@ -1030,7 +1002,6 @@ fun CardsRow1(
 }
 
 
-
 @Composable
 fun AnswerOptionsColumn(
     options: List<AnswerOption>,
@@ -1062,83 +1033,6 @@ fun AnswerOptionsColumn(
             }
         }
     }
-}
-
-//@Composable
-//fun AnimatedStatCounter(
-//    value: Int,
-//    label: String,
-//    color: Color = Color(0xFFFFD700)
-//) {
-//    val animatedValue by animateIntAsState(
-//        targetValue = value,
-//        animationSpec = tween(durationMillis = 800, easing = LinearOutSlowInEasing)
-//    )
-//    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-//        Text(
-//            text = label,
-//            color = Color.Gray,
-//            fontWeight = FontWeight.Bold,
-//            fontSize = 14.sp
-//        )
-//        Text(
-//            text = animatedValue.toString(),
-//            color = color,
-//            fontWeight = FontWeight.Bold,
-//            fontSize = 32.sp
-//        )
-//    }
-//}
-
-
-@Composable
-fun AnimatedUnlockBanner(themeName: String, onContinue: () -> Unit) {
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color.Black.copy(alpha = 0.7f)),
-        contentAlignment = Alignment.Center
-    ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            SimpleLottieRawAnimation(
-                rawRes = R.raw.cycle, // Place your animation under res/raw
-                modifier = Modifier.size(140.dp)
-            )
-            Spacer(Modifier.height(18.dp))
-            Text(
-                text = "🎉 New Theme Unlocked!",
-                style = MaterialTheme.typography.headlineMedium,
-                color = Color.White
-            )
-            Text(
-                text = themeName,
-                style = MaterialTheme.typography.titleLarge,
-                color = Color.Yellow,
-                modifier = Modifier.padding(vertical = 12.dp)
-            )
-            Button(
-                onClick = onContinue,
-                modifier = Modifier.padding(top = 8.dp)
-            ) {
-                Text("Continue")
-            }
-        }
-    }
-}
-
-
-@Composable
-fun SimpleLottieRawAnimation(rawRes: Int, modifier: Modifier = Modifier) {
-    val composition by rememberLottieComposition(LottieCompositionSpec.RawRes(rawRes))
-    val progress by animateLottieCompositionAsState(
-        composition = composition,
-        iterations = 4    // Play once for reward, or use LottieConstants.IterateForever
-    )
-    LottieAnimation(
-        isPlaying = true,
-        modifier = modifier,
-        composition = composition,
-    )
 }
 
 

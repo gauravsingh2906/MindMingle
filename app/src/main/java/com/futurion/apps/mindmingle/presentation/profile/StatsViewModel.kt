@@ -8,7 +8,9 @@ import androidx.lifecycle.viewModelScope
 import com.futurion.apps.mindmingle.R
 import com.futurion.apps.mindmingle.data.local.entity.OverallProfileEntity
 import com.futurion.apps.mindmingle.data.local.entity.PerGameStatsEntity
+import com.futurion.apps.mindmingle.domain.mapping.mapToGameStats
 import com.futurion.apps.mindmingle.domain.repository.StatsRepository
+import com.futurion.apps.mindmingle.presentation.games.GameStats
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -30,6 +32,8 @@ class StatsViewModel @Inject constructor(
 //    private val _missions = MutableStateFlow<List<DailyMissionEntity>>(emptyList())
 //    val missions: StateFlow<List<DailyMissionEntity>> = _missions
 
+    private val _gameStats = MutableStateFlow<List<GameStats>>(emptyList())
+    val gameStats: StateFlow<List<GameStats>> = _gameStats.asStateFlow()
 
     private val _profile = MutableStateFlow<OverallProfileEntity?>(null)
     val profile: StateFlow<OverallProfileEntity?> = _profile
@@ -58,21 +62,25 @@ class StatsViewModel @Inject constructor(
             Log.d("Id-stats", id)
             _userId.value = id
             loadProfile(id)
-       //     loadMissions(id)
+           // loadMissions(id)
         }
     }
 
-    fun loadProfile(userId: String) {
+    fun  loadProfile(userId: String) {
         viewModelScope.launch {
             _profile.value = statsRepo.getProfile(userId)
-            Log.d("User", _profile.value.toString())
-            _perGameStats.value = listOfNotNull(
+            Log.d("User Profile", _profile.value.toString())
+            val perGameList = listOfNotNull(
                 statsRepo.getPerGameStats(userId, "sudoku"),
                 statsRepo.getPerGameStats(userId, "math_memory"),
                 statsRepo.getPerGameStats(userId, "algebra")
             )
+            _perGameStats.value = perGameList
+            _gameStats.value = mapToGameStats(perGameList)
         }
     }
+
+
 
     fun updateGameAndProfile(
         userId: String, gameName: String, level: Int,coins:Int, won: Boolean, xp: Int,

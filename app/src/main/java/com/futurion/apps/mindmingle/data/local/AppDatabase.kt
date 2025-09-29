@@ -20,8 +20,8 @@ import com.futurion.apps.mindmingle.data.local.entity.SudokuResultEntity
 import com.futurion.apps.mindmingle.data.local.entity.ThemeUnlockEntity
 
 @Database(
-    entities = [OverallProfileEntity::class, PerGameStatsEntity::class, LevelProgressEntity::class, SavedSudokuGameEntity::class, SudokuResultEntity::class],
-    version = 3,
+    entities = [OverallProfileEntity::class, PerGameStatsEntity::class, LevelProgressEntity::class,SudokuResultEntity::class],
+    version = 2,
     exportSchema = false
 )
 @TypeConverters(IntListConverter::class, StringListConverter::class, Converters::class)
@@ -39,7 +39,7 @@ abstract class AppDatabase : RoomDatabase() {
 
 //    abstract fun themeUnlockDao(): ThemeUnlockDao
 
-    abstract fun sudokuGameDao(): SudokuGameDao
+  //  abstract fun sudokuGameDao(): SudokuGameDao
 
 
 

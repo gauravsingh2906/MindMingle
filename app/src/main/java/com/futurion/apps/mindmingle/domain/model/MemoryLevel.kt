@@ -25,10 +25,15 @@ data class MemoryLevel(
                     Op.MUL -> acc * card.value
                     Op.DIV -> if (card.value != 0) acc / card.value else acc
                 }
+
+                // Optional: intermediate clamp to avoid huge numbers during calculation
+                acc = acc.coerceIn(-200, 200)
+
                 Log.d("MathMemoryDebug", "Step ${idx + 1}: ${card.op} ${card.value} ($prev ${symbol(card.op)} ${card.value}) = $acc")
             }
-            return acc
+            return acc.coerceIn(-200, 200) // Final clamp
         }
+
 
 }
 

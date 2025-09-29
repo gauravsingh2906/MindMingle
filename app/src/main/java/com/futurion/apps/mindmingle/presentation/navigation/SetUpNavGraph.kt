@@ -22,6 +22,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewModelScope
 import androidx.navigation.NavController
 import com.futurion.apps.mindmingle.R
 import androidx.navigation.compose.NavHost
@@ -55,9 +57,11 @@ import com.futurion.apps.mindmingle.presentation.sudoku.sudoku_history.SavedSudo
 import com.futurion.apps.mindmingle.presentation.themes_screen.ThemeUnlockScreen
 import com.futurion.apps.mindmingle.presentation.themes_screen.ThemeViewModel
 import com.futurion.apps.mindmingle.presentation.utils.Constants
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
-@RequiresApi(Build.VERSION_CODES.VANILLA_ICE_CREAM)
 @Composable
 fun SetUpNavGraph(
     modifier: Modifier = Modifier
@@ -65,32 +69,31 @@ fun SetUpNavGraph(
 
     val navController = rememberNavController()
 
+
     NavHost(
         navController = navController,
         startDestination = Screen.HomeGraph
     ) {
 
-//        composable<Screen.Auth> {
-//            AuthScreen(
-//                navigateToHomeScreen = {
-//                    navController.navigate(Screen.HomeGraph) {
-//                        popUpTo<Screen.Auth> {
-//                            inclusive=true
-//                        }
-//                    }
-//                }
-//            )
-//        }
+
 
         composable<Screen.HomeGraph> {
 
             val statsViewModel: StatsViewModel = hiltViewModel()
 
+            val profile by statsViewModel.profile.collectAsStateWithLifecycle()
+
+            LaunchedEffect(profile?.coins) {
+                Log.d("Coins", profile?.coins.toString())
+            }
+
             HomeGraphScreen(
                 navigateToGameDetail = {
                     navController.navigate(Screen.GameDetailScreen(it))
                 },
-                coins = statsViewModel.profile.value?.coins.toString()
+                coins = profile?.coins ?: 0,
+                profile = profile ?: OverallProfileEntity(userId = "e"),
+                viewModel = statsViewModel
             )
         }
 
@@ -110,11 +113,7 @@ fun SetUpNavGraph(
 
             val game = sudokuViewModel.getGameById(id)
 
-            val xp = statsViewModel.perGameStats.value.forEach { it ->
-                if (it.gameName == "Sudoku") {
-                    val po = it.xp
-                }
-            }
+
 
 
 
@@ -127,19 +126,21 @@ fun SetUpNavGraph(
                 howToPlaySteps = game?.steps ?: listOf(),
                 howToPlayImages = listOf(
                     R.drawable.fourthone,
-                    R.drawable.cat,
-                    R.drawable.shopping_cart_image
                 ),
                 howToEarnCons = game?.coins ?: listOf(),
                 onStart = { difficulty ->
-                    if (game?.id == "sudoku") {
-                        navController.navigate(Screen.SudokuScreen(difficulty))
-                    } else if (game?.id == "math_memory") {
-                        val highestLevel = statsViewModel.profile.value?.mathMemoryHighestLevel ?: 1
-                        Log.d("Nav Level", highestLevel.toString())
-                        navController.navigate(Screen.MathMemoryScreen(highestLevel))
-                    } else {
-                        navController.navigate(Screen.LevelSelection("algebra"))
+                    when (game?.id) {
+                        "sudoku" -> {
+                            navController.navigate(Screen.SudokuScreen(difficulty))
+                        }
+                        "math_memory" -> {
+                            val highestLevel = statsViewModel.profile.value?.mathMemoryHighestLevel ?: 1
+                            Log.d("Nav Level", highestLevel.toString())
+                            navController.navigate(Screen.MathMemoryScreen(highestLevel))
+                        }
+                        else -> {
+                            navController.navigate(Screen.LevelSelection("algebra"))
+                        }
                     }
 
                 },
@@ -198,7 +199,7 @@ fun SetUpNavGraph(
 
             val stringDifficulty = it.toRoute<Screen.SudokuScreen>().difficulty
 
-            val difficulty = Difficulty.valueOf(it.toRoute<Screen.SudokuScreen>().difficulty)
+            val difficulty = Difficulty.valueOf(stringDifficulty)
 
             val viewModel: SudokuViewModel = hiltViewModel()
             val statsViewModel: StatsViewModel = hiltViewModel()
@@ -314,7 +315,9 @@ fun SetUpNavGraph(
                     navController.navigate(Screen.ThemeSelectionScreen(it))
                 },
                 navigateToGames = {
-                    navController.navigateUp()
+                    navController.navigate(Screen.HomeGraph) {
+                        popUpTo(Screen.HomeGraph) { inclusive = true }
+                    }
                 }
             )
 //            MathMemoryScreen(
@@ -370,30 +373,24 @@ fun SetUpNavGraph(
                     navController.popBackStack()
                 },
                 naviagteToResultScreen = { universalResult ->
-                    navController.currentBackStackEntry?.savedStateHandle?.set(
-                        "resultData",
-                        universalResult
-                    )
-                    navController.currentBackStackEntry?.savedStateHandle?.set(
-                        "currentLevel",
-                        level
-                    )
+                    navController.currentBackStackEntry?.savedStateHandle?.set("resultData", universalResult)
+                    navController.currentBackStackEntry?.savedStateHandle?.set("currentLevel", level)
 
                     navController.navigate(Screen.CommonResultScreen)
-                }
+                },
+                naviagteToDialogScreen = {},
 
             )
         }
 
         composable<Screen.ThemeSelectionScreen> {
-            val userId = it.toRoute<Screen.ThemeSelectionScreen>() ?: "3r3r"
+            val userId = it.toRoute<Screen.ThemeSelectionScreen>()
 
             val mathMemoryViewModel: MathMemoryViewModel = hiltViewModel()
 
             val themeViewModel: ThemeViewModel = hiltViewModel()
 
             ThemeUnlockScreen(
-                modifier = Modifier.fillMaxSize(),
                 onThemeSelected = { selectedTheme ->
                     Log.d("ThemeSelectionScreen", "Selected theme: $selectedTheme")
                     mathMemoryViewModel.onAction(MathMemoryAction.SelectTheme(selectedTheme))
@@ -559,35 +556,47 @@ private fun handleSudokuWin(
 //        missionType = "play_games"
 //    )
 
-    newViewModel.updateGameAndProfile(
-        userId = newViewModel.userId.value ?: "name",
-        gameName = "sudoku",
-        level = 1,
-        won = true,
-        xp = state.xpEarned,
-        hints = state.hintsUsed,
-        timeSec = state.elapsedTime.toLong(),
-        coins = coins,
-        currentStreak = viewModel.currentStreak.value,
-        bestStreak = viewModel.bestStreak.value,
-        resultTitle = "🎉 EXCELLENT!",
-        resultMessage = "You solved the puzzle perfectly!",
-        isMatchWon = true,
-        eachGameXp = state.xpEarned,
-        eachGameCoin = 1,
-    )
+    newViewModel.viewModelScope.launch {
 
-    // ✅ Navigate to CommonResultScreen with Sudoku data
-    navigateToSudokuResult(
-        navController = navController,
-        state = state,
-        difficulty = difficulty,
-        coins = coins,
-        currentStreak = viewModel.currentStreak.value,
-        bestStreak = viewModel.bestStreak.value,
-        profileData = newViewModel.profile.value,
-        isWin = true
-    )
+        withContext(Dispatchers.IO) {
+            newViewModel.updateGameAndProfile(
+                userId = newViewModel.userId.value ?: "name",
+                gameName = "sudoku",
+                level = 1,
+                won = true,
+                xp = state.xpEarned,
+                hints = state.hintsUsed,
+                timeSec = state.elapsedTime.toLong(),
+                coins = coins,
+                currentStreak = viewModel.currentStreak.value,
+                bestStreak = viewModel.bestStreak.value,
+                resultTitle = "🎉 EXCELLENT!",
+                resultMessage = "You solved the puzzle perfectly!",
+                isMatchWon = true,
+                eachGameXp = state.xpEarned,
+                eachGameCoin = 1,
+            )
+        }
+
+        withContext(Dispatchers.Main) {
+            // ✅ Navigate to CommonResultScreen with Sudoku data
+            navigateToSudokuResult(
+                navController = navController,
+                state = state,
+                difficulty = difficulty,
+                coins = coins,
+                currentStreak = viewModel.currentStreak.value,
+                bestStreak = viewModel.bestStreak.value,
+                profileData = newViewModel.profile.value,
+                isWin = true
+            )
+        }
+
+    }
+
+
+
+
 }
 
 private fun handleSudokuLoss(
@@ -604,36 +613,44 @@ private fun handleSudokuLoss(
 
     val time = (state.elapsedTime) / 60
 
+    newViewModel.viewModelScope.launch {
+        withContext(Dispatchers.IO) {
+            newViewModel.updateGameAndProfile(
+                userId = newViewModel.userId.value ?: "name",
+                gameName = "sudoku",
+                level = 1,
+                won = false,
+                xp = state.xpEarned,
+                hints = state.hintsUsed,
+                timeSec = state.elapsedTime.toLong(),
+                coins = 0,
+                currentStreak = viewModel.currentStreak.value,
+                bestStreak = viewModel.bestStreak.value,
+                resultTitle = "😔 GAME OVER",
+                resultMessage = "You made 3 mistakes. Better luck next time!",
+                isMatchWon = false,
+                eachGameXp = state.xpEarned,
+                eachGameCoin = 1,
+            )
+        }
+        withContext(Dispatchers.Main) {
+            // ✅ Navigate to CommonResultScreen with Sudoku data
+            navigateToSudokuResult(
+                navController = navController,
+                state = state,
+                difficulty = difficulty,
+                currentStreak = viewModel.currentStreak.value,
+                bestStreak = viewModel.bestStreak.value,
+                profileData = newViewModel.profile.value,
+                isWin = false,
+                coins = coins,
+            )
+        }
+    }
 
-    newViewModel.updateGameAndProfile(
-        userId = newViewModel.userId.value ?: "name",
-        gameName = "sudoku",
-        level = 1,
-        won = false,
-        xp = state.xpEarned,
-        hints = state.hintsUsed,
-        timeSec = state.elapsedTime.toLong(),
-        coins = 0,
-        currentStreak = viewModel.currentStreak.value,
-        bestStreak = viewModel.bestStreak.value,
-        resultTitle = "😔 GAME OVER",
-        resultMessage = "You made 3 mistakes. Better luck next time!",
-        isMatchWon = false,
-        eachGameXp = state.xpEarned,
-        eachGameCoin = 1,
-    )
 
-    // ✅ Navigate to CommonResultScreen with Sudoku data
-    navigateToSudokuResult(
-        navController = navController,
-        state = state,
-        difficulty = difficulty,
-        currentStreak = viewModel.currentStreak.value,
-        bestStreak = viewModel.bestStreak.value,
-        profileData = newViewModel.profile.value,
-        isWin = false,
-        coins = coins,
-    )
+
+
 }
 
 private fun navigateToSudokuResult(
@@ -662,7 +679,7 @@ private fun navigateToSudokuResult(
         xpEarned = profileData?.currentLevelXP?.plus(state.xpEarned) ?: 0,
         eachGameXp = state.xpEarned,
         eachGameCoin = if (currentStreak >= 3) 20 else 0,
-        coinsEarned = coins ?: 1,
+        coinsEarned = coins,
         currentStreak = if (isWin) currentStreak + 1 else 0,
         bestStreak = if (isWin) bestStreak + 1 else bestStreak,
     )

@@ -1,6 +1,7 @@
-package com.google.codelab.gamingzone.presentation.games.algebra
+package com.futurion.apps.mindmingle.domain
 
 import com.futurion.apps.mindmingle.domain.model.GameType
+import com.google.codelab.gamingzone.presentation.games.algebra.Question
 import kotlin.random.Random
 
 class GameManager {
@@ -119,6 +120,13 @@ class GameManager {
             '÷' -> a / b
             else -> a + b
         }
+
+        // ✅ Avoid ambiguous cases
+        if ((result == a && b == 1) || (result == b && a == 1)) {
+            return genMissingOperator(config) // regenerate to avoid cases like 10 ? 1 = 10
+        }
+
+      //  val options = (ops.shuffled().take(3) + correctOp).distinct().shuffled()
 
         val options = (ops.shuffled().take(3) + correctOp).distinct().shuffled()
 

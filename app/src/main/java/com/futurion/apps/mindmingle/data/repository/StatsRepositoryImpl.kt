@@ -248,12 +248,13 @@ class StatsRepositoryImpl @Inject constructor(
 
     override suspend fun initUserIfNeeded(username: String?): String {
         val existing = overallProfileDao.getAnyUser()
+        Log.d("Existing", "Existing generated $existing")
 
         if (existing != null) return existing.userId
 
 
         val newId = UUID.randomUUID().toString()
-        Log.d("Id", "First id generated $newId")
+        Log.d("FirstId", "First id generated $newId")
 
         val adjectives = listOf("Cool", "Silent", "Funky", "Smart", "Dark", "Fire")
         val nouns = listOf("Ninja", "Cat", "Wizard", "Dragon", "Knight", "Fox")
@@ -277,7 +278,7 @@ class StatsRepositoryImpl @Inject constructor(
             userId = newId,
             username = username,
             avatarUri = defaultUnlockedAvatars,
-            unlockedAvatars = listOf(defaultUnlockedAvatars),
+            unlockedAvatars = listOf(defaultAvatar)+defaultUnlockedAvatars,
         )
         overallProfileDao.insertProfile(us)
         // create default total stats row
@@ -313,6 +314,7 @@ class StatsRepositoryImpl @Inject constructor(
     // update the current avatar to new one
     override suspend fun updateAvatar(userId: String, newAvatarUri: Int) {
         val profile = overallProfileDao.getProfile(userId) ?: return
+        Log.d("Avatar", "Updating avatar for user $userId to $newAvatarUri")
         if (profile.unlockedAvatars.contains(newAvatarUri)) {
             overallProfileDao.updateProfile(profile.copy( avatarUri = newAvatarUri,))
         }

@@ -45,7 +45,6 @@ import com.futurion.apps.mindmingle.domain.model.GameTheme
 @Composable
 fun ThemeUnlockScreen(
     themeViewModel: ThemeViewModel = hiltViewModel(),
-    modifier: Modifier = Modifier,
     onThemeSelected:(GameTheme) -> Unit
 ) {
     val loading by remember { derivedStateOf { themeViewModel.loading.value } }
@@ -62,7 +61,7 @@ fun ThemeUnlockScreen(
 
 
     Column(
-        modifier = modifier
+        modifier = Modifier
             .fillMaxSize()
             .background(Color(0xFFF0F0F0))
             .padding(16.dp)
@@ -70,7 +69,7 @@ fun ThemeUnlockScreen(
             .navigationBarsPadding()
     ) {
         Text(
-            text = "Your Coins: $coins",
+            text = "Total Coins: $coins",
             style = MaterialTheme.typography.headlineSmall,
             modifier = Modifier.padding(bottom = 16.dp)
         )

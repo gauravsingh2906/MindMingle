@@ -13,6 +13,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import com.futurion.apps.mindmingle.R
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -39,6 +40,7 @@ import com.futurion.apps.mindmingle.domain.model.AllGames
 import com.futurion.apps.mindmingle.domain.model.UniversalResult
 import com.futurion.apps.mindmingle.presentation.math_memory.MathMemoryAction
 import com.futurion.apps.mindmingle.presentation.math_memory.MathMemoryViewModel
+import com.futurion.apps.mindmingle.presentation.utils.FontSize
 
 
 import kotlinx.coroutines.delay
@@ -46,7 +48,7 @@ import kotlin.math.cos
 import kotlin.math.sin
 
 
-@RequiresApi(Build.VERSION_CODES.VANILLA_ICE_CREAM)
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun GameResultScreen(
@@ -72,7 +74,8 @@ fun GameResultScreen(
 
 
     BackHandler {
-        navigateToGameDetail(gameTypeq)
+        onHome()
+     //   navigateToGameDetail(gameTypeq)
     }
 
 
@@ -119,7 +122,6 @@ fun GameResultScreen(
             )
             .systemBarsPadding()
             .navigationBarsPadding()
-
     ) {
 
         // Floating particles background
@@ -208,7 +210,7 @@ fun GameResultScreen(
 
                         Image(
                             painter = if (data.isMatchWon == true) painterResource(R.drawable.figma_trophy) else painterResource(
-                                R.drawable.weight
+                                R.drawable.warning
                             ),
                             contentDescription = "Trophy",
                         )
@@ -219,10 +221,10 @@ fun GameResultScreen(
                     Text(
                         text = data.resultTitle.uppercase(),
                         textAlign = TextAlign.Center,
-                        fontSize = 32.sp,
+                        fontSize = FontSize.LARGE,
                         fontWeight = FontWeight.Bold,
                         color = Color.White,
-                        letterSpacing = 2.sp
+                        letterSpacing = 1.sp
                     )
 
 //                    Text(
@@ -236,11 +238,11 @@ fun GameResultScreen(
 
                     Text(
                         text = when (gameType) {
-                            AllGames.ALGEBRA -> if (data.isMatchWon == true) "LEVEL $currentLevel COMPLETED" else "Better Luck Next Time!"
-                            AllGames.SUDOKU -> "${currentDifficulty.uppercase()} SUDOKU ${if (data.won == true) "COMPLETED" else "Better Luck Next Time!"}"
+                            AllGames.ALGEBRA -> if (data.isMatchWon == true) "LEVEL $currentLevel COMPLETED" else ""
+                            AllGames.SUDOKU -> "${currentDifficulty.uppercase()} SUDOKU ${if (data.won == true) "COMPLETED" else ""}"
                             AllGames.MEMORY -> if (data.isMatchWon == true) "LEVEL $currentLevel COMPLETED" else "Better Luck Next Time!"
                         },
-                        fontSize = 14.sp,
+                        fontSize = FontSize.REGULAR,
                         fontWeight = FontWeight.Medium,
                         color = Color.White.copy(alpha = 0.8f),
                         letterSpacing = 1.sp
@@ -264,101 +266,64 @@ fun GameResultScreen(
                     AllGames.MEMORY -> MemoryMixStatsSection(data, currentLevel)
                 }
             }
-//                Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-//
-//                    // XP and Coins Row
-//                    Row(
-//                        horizontalArrangement = Arrangement.spacedBy(16.dp),
-//                        modifier = Modifier.fillMaxWidth()
-//                    ) {
-//                        StatCard(
-//                            modifier = Modifier.weight(1f),
-//                            icon = painterResource(R.drawable.xp_icon),
-//                            iconColor = Color(0xFFFFD700),
-//                            title = "XP EARNED",
-//                            value = "+${data.eachGameXp}",
-//                            subtitle = "This Level"
-//                        )
-//
-//                        StatCard(
-//                            modifier = Modifier.weight(1f),
-//                            icon = painterResource(R.drawable.coin_icon),
-//                            iconColor = Color(0xFFFF9800),
-//                            title = "COINS EARNED",
-//                            value = data.eachGameCoin.toString(),
-//                            subtitle = "This Level"
-//                        )
-//
-//                    }
-//
-//                    // Streak Card (Full Width)
-//                    StatCard(
-//                        modifier = Modifier.fillMaxWidth(),
-//                        icon = painterResource(R.drawable.fire_icon),
-//                        iconColor = Color(0xFFFF5722),
-//                        title = "STREAK POWER",
-//                        value = "${data.currentStreak} / ${data.bestStreak}",
-//                        subtitle = "Current / Best Streak"
+
+            Spacer(modifier = Modifier.weight(1f))
+
+            // 🎁 Unlock Rewards (if any)
+//            data.unlockAvatarInfo?.let { avatarInfo ->
+//                AnimatedVisibility(
+//                    visible = isVisible,
+//                    enter = scaleIn(
+//                        animationSpec = tween(600, delayMillis = 800)
+//                    ) + fadeIn(tween(600, delayMillis = 800))
+//                ) {
+//                    UnlockCard(
+//                        title = if (avatarInfo.unlocked) "🎊 NEW AVATAR UNLOCKED!" else "🔒 AVATAR LOCKED",
+//                        subtitle = if (avatarInfo.unlocked) avatarInfo.name else "${avatarInfo.name} • ${avatarInfo.unlockAt}",
+//                        isUnlocked = avatarInfo.unlocked
 //                    )
 //                }
 //            }
 
-            Spacer(modifier = Modifier.height(32.dp))
-
-            // 🎁 Unlock Rewards (if any)
-            data.unlockAvatarInfo?.let { avatarInfo ->
-                AnimatedVisibility(
-                    visible = isVisible,
-                    enter = scaleIn(
-                        animationSpec = tween(600, delayMillis = 800)
-                    ) + fadeIn(tween(600, delayMillis = 800))
-                ) {
-                    UnlockCard(
-                        title = if (avatarInfo.unlocked) "🎊 NEW AVATAR UNLOCKED!" else "🔒 AVATAR LOCKED",
-                        subtitle = if (avatarInfo.unlocked) avatarInfo.name else "${avatarInfo.name} • ${avatarInfo.unlockAt}",
-                        isUnlocked = avatarInfo.unlocked
-                    )
-                }
-            }
-
             // 💬 Unlock Message
-            data.unlockMessage?.let { message ->
-                AnimatedVisibility(
-                    visible = isVisible,
-                    enter = slideInHorizontally(
-                        initialOffsetX = { it },
-                        animationSpec = tween(700, delayMillis = 1000)
-                    ) + fadeIn(tween(700, delayMillis = 1000))
-                ) {
-                    Card(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 8.dp),
-                        colors = CardDefaults.cardColors(
-                            containerColor = Color.White.copy(alpha = 0.1f)
-                        ),
-                        shape = RoundedCornerShape(16.dp),
-                        border = BorderStroke(
-                            1.dp,
-                            Color.White.copy(alpha = 0.3f)
-                        )
-                    ) {
-                        Text(
-                            text = message,
-                            modifier = Modifier.padding(20.dp),
-                            color = Color.White,
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Medium,
-                            textAlign = TextAlign.Center
-                        )
-                    }
-                }
-            }
+//            data.unlockMessage?.let { message ->
+//                AnimatedVisibility(
+//                    visible = isVisible,
+//                    enter = slideInHorizontally(
+//                        initialOffsetX = { it },
+//                        animationSpec = tween(700, delayMillis = 1000)
+//                    ) + fadeIn(tween(700, delayMillis = 1000))
+//                ) {
+//                    Card(
+//                        modifier = Modifier
+//                            .fillMaxWidth()
+//                            .padding(vertical = 8.dp),
+//                        colors = CardDefaults.cardColors(
+//                            containerColor = Color.White.copy(alpha = 0.1f)
+//                        ),
+//                        shape = RoundedCornerShape(16.dp),
+//                        border = BorderStroke(
+//                            1.dp,
+//                            Color.White.copy(alpha = 0.3f)
+//                        )
+//                    ) {
+//                        Text(
+//                            text = message,
+//                            modifier = Modifier.padding(20.dp),
+//                            color = Color.White,
+//                            fontSize = 14.sp,
+//                            fontWeight = FontWeight.Medium,
+//                            textAlign = TextAlign.Center
+//                        )
+//                    }
+//                }
+//            }
 
-            Spacer(modifier = Modifier.height(40.dp))
+       //     Spacer(modifier = Modifier.height(40.dp))
 
             // 🎮 Action Buttons
             AnimatedVisibility(
+                modifier = Modifier.align(Alignment.Start),
                 visible = isVisible,
                 enter = slideInVertically(
                     initialOffsetY = { it },
@@ -424,21 +389,29 @@ private fun AlgebraStatsSection(data: UniversalResult) {
                 modifier = Modifier.weight(1f),
                 icon = painterResource(R.drawable.figma_coin),
                 iconColor = Color(0xFFFF9800),
-                title = "COINS EARNED",
+                title = "COINS",
                 value = "+${data.eachGameCoin}", // changed
                 subtitle = "This Level"
+            )
+            StatCard(
+                modifier = Modifier.weight(1f),
+                icon = painterResource(R.drawable.fire_icon),
+                iconColor = Color(0xFFFF5722),
+                title = "STREAK",
+                value = "${data.currentStreak} / ${data.bestStreak}",
+                subtitle = "Current / Best Streak"
             )
         }
 
         // Streak Card
-        StatCard(
-            modifier = Modifier.fillMaxWidth(),
-            icon = painterResource(R.drawable.fire_icon),
-            iconColor = Color(0xFFFF5722),
-            title = "STREAK POWER",
-            value = "${data.currentStreak} / ${data.bestStreak}",
-            subtitle = "Current / Best Streak"
-        )
+//        StatCard(
+//            modifier = Modifier.fillMaxWidth(),
+//            icon = painterResource(R.drawable.fire_icon),
+//            iconColor = Color(0xFFFF5722),
+//            title = "STREAK POWER",
+//            value = "${data.currentStreak} / ${data.bestStreak}",
+//            subtitle = "Current / Best Streak"
+//        )
     }
 }
 
@@ -495,7 +468,7 @@ private fun SudokuStatsSection(data: UniversalResult, difficulty: String) {
 
             StatCard(
                 modifier = Modifier.weight(1f),
-                icon = painterResource(R.drawable.hint_without_ad),
+                icon = painterResource(R.drawable.back_arrow),
                 iconColor = Color(0xFFFFC107),
                 title = "HINTS USED",
                 value = "${data.hintsUsed ?: 0}",
@@ -506,7 +479,7 @@ private fun SudokuStatsSection(data: UniversalResult, difficulty: String) {
         // Difficulty and Best Time Card
         StatCard(
             modifier = Modifier.fillMaxWidth(),
-            icon = painterResource(R.drawable.grid),
+            icon = painterResource(R.drawable.warning),
             iconColor = when (difficulty.lowercase()) {
                 "easy" -> Color(0xFF4CAF50)
                 "medium" -> Color(0xFFFF9800)
@@ -554,7 +527,7 @@ private fun MemoryMixStatsSection(data: UniversalResult, currentLevel: Int) {
         ) {
             StatCard(
                 modifier = Modifier.weight(1f),
-                icon = painterResource(R.drawable.delete),
+                icon = painterResource(R.drawable.warning),
                 iconColor = Color(0xFF9C27B0),
                 title = "FINAL SCORE",
                 value = "${data.score ?: 0}",
@@ -563,7 +536,7 @@ private fun MemoryMixStatsSection(data: UniversalResult, currentLevel: Int) {
 
             StatCard(
                 modifier = Modifier.weight(1f),
-                icon = painterResource(R.drawable.check),
+                icon = painterResource(R.drawable.user),
                 iconColor = Color(0xFF2196F3),
                 title = "COMPLETION TIME",
                 value = formatTime(data.bestTimeSec ?: 0),
@@ -574,7 +547,7 @@ private fun MemoryMixStatsSection(data: UniversalResult, currentLevel: Int) {
         // Level Progress Card
         StatCard(
             modifier = Modifier.fillMaxWidth(),
-            icon = painterResource(R.drawable.grid),
+            icon = painterResource(R.drawable.user),
             iconColor = Color(0xFFE91E63),
             title = "MEMORY CHALLENGE",
             value = "LEVEL $currentLevel",
@@ -689,7 +662,9 @@ private fun AlgebraActionButtons(
     onNext: () -> Unit,
     onHome: () -> Unit
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    Column(
+        verticalArrangement = Arrangement.Bottom
+    ) {
         // Next Level Button
         if (data.canNextLevel && canProgressToNext) {
             GameButton(
@@ -706,6 +681,8 @@ private fun AlgebraActionButtons(
                 modifier = Modifier.fillMaxWidth()
             )
         }
+
+        Spacer(modifier = Modifier.height(14.dp))
 
         // Action Buttons Row
         Row(
@@ -1096,8 +1073,4 @@ private fun AnimatedParticles() {
     }
 }
 
-@Preview(showBackground = true, showSystemUi = true)
-@Composable
-fun Preview() {
 
-}

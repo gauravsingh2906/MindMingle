@@ -77,6 +77,7 @@ class ThemeViewModel @Inject constructor(
 
    private val userId = savedStateHandle.get<String>("userId")
 
+
 //    private val userId: String = savedStateHandle.get<String>("userId")
 //        ?: error("UserId is required in SavedStateHandle")
 
@@ -114,6 +115,7 @@ class ThemeViewModel @Inject constructor(
     private suspend fun loadUserData() {
         userId?.let {
             val profile = statsRepo.getProfile(it)
+            Log.d("ThemeViewModel", "Theme first profile: $it")
 
             _unlockedThemes.value = (profile?.unlockedThemes?.toSet()?.ifEmpty { _unlockedThemes.value.plus(Default[0].name) } ?: Default[0].name) as Set<String>
             Log.d("ThemeViewModel", " first Unlocked themes: ${_unlockedThemes.value}")

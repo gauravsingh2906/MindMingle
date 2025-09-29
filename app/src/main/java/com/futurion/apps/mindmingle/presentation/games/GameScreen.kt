@@ -9,8 +9,10 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -19,6 +21,7 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -41,6 +44,7 @@ data class GameGridItem(
 @Composable
 fun GamesScreen(
     games: List<GameGridItem>,
+    statsForGame: (gameId: String) -> GameStats,
     onGameClick: (String) -> Unit
 ) {
     LazyVerticalGrid(
@@ -54,14 +58,90 @@ fun GamesScreen(
             if (game.isComingSoon) {
                 ComingSoonCard()
             } else {
-                GameCardItem(
-                    game = game,
+                val stats = statsForGame(game.id)
+                GameCard(
+                    gameName = game.name,
+                    description = game.description,
+                    imageRes = game.imageResId,
+                    stats = stats,
                     onClick = {
                         onGameClick(game.id)
                     }
                 )
             }
         }
+    }
+}
+
+@Composable
+fun GameCard(
+    gameName: String,
+    description: String,
+    imageRes: Int,
+    stats: GameStats,
+    onClick: () -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .padding(8.dp)
+            .fillMaxWidth()
+            .clickable { onClick() },
+        shape = RoundedCornerShape(16.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)
+    ) {
+        Column {
+            // Game image
+            Image(
+                painter = painterResource(id = imageRes),
+                contentDescription = gameName,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(140.dp),
+                contentScale = ContentScale.Crop
+            )
+
+            // Game title + description
+            Column(
+                modifier = Modifier.padding(12.dp)
+            ) {
+                Text(gameName, style = MaterialTheme.typography.titleMedium)
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(description, style = MaterialTheme.typography.bodySmall)
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // Stats row with icons
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    StatItem(icon = "🎮" , value = stats.gamesPlayed, label = "Games")
+                    StatItem(icon = "🏆", value = stats.winPercent, label = "Win%")
+                    StatItem(icon = "\uD83D\uDD25", value = stats.currentStreak, label = "Streak")
+                    StatItem(icon = "⭐", value = stats.xpTotal, label = "XP")
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun StatItem(icon: String, value: Int, label: String) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(
+            text = icon,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.primary
+        )
+//        Icon(
+//            imageVector = icon,
+//            contentDescription = label,
+//            tint = MaterialTheme.colorScheme.primary
+//        )
+        Text(value.toString(), style = MaterialTheme.typography.bodyMedium)
+        Text(label, style = MaterialTheme.typography.bodySmall)
     }
 }
 
@@ -93,6 +173,7 @@ fun GameCardItem(
                 modifier = Modifier
                     .height(130.dp)
                     .fillMaxWidth()
+                    .background(Color.DarkGray)
             )
             Spacer(Modifier.height(6.dp))
             Text(

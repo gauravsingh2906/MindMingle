@@ -91,7 +91,7 @@ fun LevelBasedScreen(
                 val backgroundColor = when {
                     hasReward -> if (!unlocked) Color(0xFF4444AA) else Color.DarkGray// Special color for reward levels
                     unlocked -> Color.DarkGray
-                    else -> Color.Gray.copy(alpha = 0.4f)
+                    else -> Color.Gray.copy(alpha = 0.2f)
                 }
 
                 Column(

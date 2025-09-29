@@ -1,4 +1,4 @@
-package com.google.codelab.gamingzone.presentation.games.algebra
+package com.futurion.apps.mindmingle.domain
 
 data class LevelConfig(val level: Int) {
 
@@ -28,10 +28,10 @@ data class LevelConfig(val level: Int) {
 
     fun timeLimitSeconds(): Int {
         return when {
-            level <= 5 -> 12
-            level <= 10 -> 10
-            level <= 15 -> 8
-            level <= 20 -> 6
+            level <= 5 -> 10
+            level <= 10 -> 12
+            level <= 15 -> 14
+            level <= 20 -> 16
             else -> 5
         }
     }

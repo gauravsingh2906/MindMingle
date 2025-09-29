@@ -72,8 +72,8 @@ object DatabaseModule {
         return database.sudokuResultDao()
     }
 
-    @Provides
-    fun provideSudokuGameDao(db: AppDatabase): SudokuGameDao = db.sudokuGameDao()
+//    @Provides
+//    fun provideSudokuGameDao(db: AppDatabase): SudokuGameDao = db.sudokuGameDao()
 
     @Provides
     fun provideLevelProgressDao(db: AppDatabase): LevelProgressDao = db.levelProgressDao()

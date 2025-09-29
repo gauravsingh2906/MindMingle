@@ -51,13 +51,20 @@ fun AlgebraGameScreen(
     viewModel: AlgebraViewModel = hiltViewModel(),
     onBack: () -> Unit,
     naviagteToResultScreen: (UniversalResult) -> Unit,
-    gameResultModel: GameResultViewModel=hiltViewModel(),
+    naviagteToDialogScreen: (UniversalResult) -> Unit,
+    gameResultModel: GameResultViewModel = hiltViewModel(),
 ) {
     var showExitDialog by remember { mutableStateOf(false) }
 
     BackHandler {
         showExitDialog = true
     }
+
+    val specialLevels = setOf(5, 10, 14, 20, 28, 35) // your special levels
+    var showCoinDialog by remember { mutableStateOf(false) }
+    var earnedCoins by remember { mutableStateOf(0) }
+    var navigationPending by remember { mutableStateOf(false) }
+
 
     var shouldLoadResult by remember { mutableStateOf(false) }
     var shouldNavigate by remember { mutableStateOf(false) }
@@ -71,7 +78,9 @@ fun AlgebraGameScreen(
             confirmButton = {
                 TextButton(onClick = {
                     showExitDialog = false
-                    onBackPressed()
+                    viewModel.endGame()
+                    shouldLoadResult=true
+                    shouldNavigate = true
                 }) {
                     Text("Yes")
                 }
@@ -191,8 +200,10 @@ fun AlgebraGameScreen(
 
 
     LaunchedEffect(gameResult) {
+        Log.e("Final", "$gameResult")
         gameResult?.let { result ->
             if (result.won) {
+                Log.e("Final", "Won")
                 soundPool.play(winSoundId, 1f, 1f, 1, 0, 1f)
                 // Step 1: Start animation first
                 showAnimation = true
@@ -214,19 +225,50 @@ fun AlgebraGameScreen(
                 // Step 3: Hide animation, show dialog
                 showAnimation = false
                 //   showResultDialog = true  .. important
+
+                val currentLevel = viewModel.level.value
+
+                if (specialLevels.contains(currentLevel)) {
+                    earnedCoins = viewModel.coinsEarned.value
+                    showCoinDialog = true
+                    navigationPending = true
+                    shouldNavigate = false
+                } else {
+                    showCoinDialog = false
+                    navigationPending = false
+                    shouldNavigate = true
+                }
+
             } else {
                 soundPool.play(loseSoundId, 1f, 1f, 1, 0, 1f)
                 // If lost → show dialog directly
                 //     gameResultModel.loadResult(viewModel.userId.value ?: "wew","algebra")
                 //  showResultDialog = true important
                 //   naviagteToResultScreen()
-                delay(3000)
+                delay(500)
                 shouldLoadResult = true
+                shouldNavigate=true
             }
             shouldLoadResult = true
             shouldNavigate = true
         }
     }
+
+    if (showCoinDialog) {
+        CoinClaimDialog(
+            coinsEarned = earnedCoins,
+            onClaim = {
+                showCoinDialog = false
+                navigationPending = false
+                shouldNavigate = true
+            },
+            onDismiss = {
+                showCoinDialog = false
+                shouldNavigate = true
+            }
+        )
+    }
+
     LaunchedEffect(shouldLoadResult) {
         if (shouldLoadResult) {
             Log.e("Result", viewModel.userId.value ?: "no userId")
@@ -235,10 +277,20 @@ fun AlgebraGameScreen(
                 algebraScore = score
             )
             shouldLoadResult = false // Reset flag
-            shouldNavigate = true // Set navigation flag
+       //     shouldNavigate = true // Set navigation flag //important
+
+            if (specialLevels.contains(level) && gameResult?.won == true) {
+                // Wait for user to confirm, don't navigate automatically
+                shouldNavigate = false
+            } else {
+                // For other levels, navigate immediately
+                shouldNavigate = true
+            }
+
         }
     }
     val resultData = gameResultModel.resultState.collectAsState().value
+
 
     LaunchedEffect(shouldNavigate, resultData) {
         if (shouldNavigate && resultData != null) {
@@ -420,7 +472,11 @@ fun AlgebraGameScreen(
                                 onClosed = {
                                     // Optional: show a message if ad wasn’t ready
                                     if (!showHint) {
-                                        Toast.makeText(context, "Ad not ready, please try again.", Toast.LENGTH_SHORT).show()
+                                        Toast.makeText(
+                                            context,
+                                            "Ad not ready, please try again.",
+                                            Toast.LENGTH_SHORT
+                                        ).show()
                                     }
                                 }
                             )

@@ -7,9 +7,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.futurion.apps.mindmingle.domain.repository.LevelRepository
 import com.futurion.apps.mindmingle.domain.repository.StatsRepository
-import com.google.codelab.gamingzone.presentation.games.algebra.GameManager
+import com.futurion.apps.mindmingle.domain.GameManager
 import com.futurion.apps.mindmingle.domain.model.GameResult
-import com.google.codelab.gamingzone.presentation.games.algebra.LevelConfig
+import com.futurion.apps.mindmingle.domain.LevelConfig
 import com.google.codelab.gamingzone.presentation.games.algebra.Question
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
@@ -17,7 +17,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -154,6 +153,9 @@ class AlgebraViewModel @Inject constructor(
     fun startTimer(seconds: Int) {
         timerJob?.cancel()
         _timeRemaining.value = seconds
+        viewModelScope.launch {
+            _userId.value = statsRepository.initUserIfNeeded()
+        }
         timerJob = viewModelScope.launch {
             while (_timeRemaining.value > 0) {
                 delay(1000)
@@ -265,7 +267,7 @@ class AlgebraViewModel @Inject constructor(
 
             viewModelScope.launch {
                 statsRepository.updateGameResult(
-                    userId = statsRepository.initUserIfNeeded(),
+                    userId = statsRepository.initUserIfNeeded() ?: "987",
                     gameName = "algebra",
                     levelReached = currentLevel,
                     won = false,
@@ -282,7 +284,7 @@ class AlgebraViewModel @Inject constructor(
                     isMatchWon = false
                 )
             }
-            endGame()
+            endGame1()
         } else if ((_score.value / 100) > _level.value) {
 
             markLevelCompleted()
@@ -323,7 +325,7 @@ class AlgebraViewModel @Inject constructor(
 
             viewModelScope.launch {
                 statsRepository.updateGameResult(
-                    userId = statsRepository.initUserIfNeeded(),
+                    userId = statsRepository.initUserIfNeeded() ?: "987",
                     gameName = "algebra",
                     levelReached = currentLevel,
                     won = true,
@@ -341,7 +343,7 @@ class AlgebraViewModel @Inject constructor(
                 )
             }
             //  viewModel.loadResult(userId.value ?: "pass", "algebra")
-            endGame()
+            endGame1()
         } else {
             startNext()
         }
@@ -372,7 +374,7 @@ class AlgebraViewModel @Inject constructor(
         _hintsUsed.value += 1
     }
 
-    private fun endGame(timeout: Boolean = false) {
+     fun endGame(timeout: Boolean = false) {
         timerJob?.cancel()
         timerJob = null
 
@@ -390,9 +392,9 @@ class AlgebraViewModel @Inject constructor(
                 timeSpent = _time.value.toLong()
             )
             viewModelScope.launch {
-                val user = statsRepository.initUserIfNeeded()
+                // val user = statsRepository.initUserIfNeeded()
                 statsRepository.updateGameResult(
-                    userId = user,
+                    userId = _userId.value ?: "987",
                     gameName = "algebra",
                     levelReached = currentLevel,
                     won = false,
@@ -414,6 +416,42 @@ class AlgebraViewModel @Inject constructor(
 
             _gameOver.value = true
             return
+        } else {
+            // Always override gameResult on timeout, even if non-null
+            _gameResult.value = GameResult(
+                level = currentLevel,
+                won = false,
+                xpEarned = 0,
+                score = _score.value,
+                streak = _currentStreak.value,
+                bestStreak = _bestStreak.value,
+                hintsUsed = _hintsUsed.value,
+                timeSpent = _time.value.toLong()
+            )
+            viewModelScope.launch {
+                // val user = statsRepository.initUserIfNeeded()
+                statsRepository.updateGameResult(
+                    userId = _userId.value ?: "987",
+                    gameName = "algebra",
+                    levelReached = currentLevel,
+                    won = false,
+                    xpGained = 0,
+                    hintsUsed = _hintsUsed.value,
+                    timeSpentSeconds = _time.value.toLong(),
+                    coinsEarned = 0,
+                    currentStreak = 0,
+                    bestStreak = _bestStreak.value,
+                    eachGameXp = 0,
+                    eachGameCoin = 0,
+                    resultTitle = "Better Luck Next Time",
+                    resultMessage = "Try again!",
+                    isMatchWon = false
+                )
+                Log.d("EndGame", "Stats updated for timeout lose")
+            }
+
+
+            _gameOver.value = true
         }
 
         // 🔑 if result is already set (win/lose), don’t overwrite
@@ -426,5 +464,15 @@ class AlgebraViewModel @Inject constructor(
         _gameOver.value = true
     }
 
+    fun endGame1() {
+        if (_gameResult.value != null) {
+            _gameOver.value = true
+            return
+        }
+
+        _gameOver.value = true
+    }
 
 }
+
+

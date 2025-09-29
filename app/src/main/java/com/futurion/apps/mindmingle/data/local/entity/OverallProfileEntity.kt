@@ -1,5 +1,7 @@
 package com.futurion.apps.mindmingle.data.local.entity
 
+import android.graphics.drawable.Drawable
+import com.futurion.apps.mindmingle.R
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 import androidx.room.TypeConverters
@@ -14,7 +16,7 @@ data class OverallProfileEntity(
     val username: String = "Player",
     val avatarUri: Int? = null,          // URI string/path to avatar image
     @TypeConverters(IntListConverter::class)
-    val unlockedAvatars: List<Int> = emptyList(),
+    val unlockedAvatars: List<Int> = listOf(R.drawable.avatar_1),
     @TypeConverters(StringListConverter::class)
     val unlockedUsernames: List<String> = emptyList(),
     val coins: Int = 0,                     // coins to spend on avatar/name customizations

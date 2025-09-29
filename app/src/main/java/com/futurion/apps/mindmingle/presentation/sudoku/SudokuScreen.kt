@@ -264,7 +264,7 @@ fun HintButton(
             modifier = Modifier.fillMaxSize().border(width = 1.dp, color = Color.Yellow, shape = CircleShape)
         ) {
             Icon(
-                painter = painterResource(Resources.Icon.Hint),
+                painter = painterResource(R.drawable.hint_without_ad),
                 contentDescription = if (hintsLeft > 0) "Hint" else "Watch ad for hint",
                 tint = Color(0xFFFFEB3B), // yellow bulb
                 modifier = Modifier.size(36.dp)
@@ -302,7 +302,7 @@ fun HintButton(
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
-                    painter = painterResource(Resources.Icon.VideoPlay),
+                    painter = painterResource(R.drawable.hint_without_ad),
                     contentDescription = "Watch Ad",
                     tint = Color.White,
                     modifier = Modifier.size(14.dp)

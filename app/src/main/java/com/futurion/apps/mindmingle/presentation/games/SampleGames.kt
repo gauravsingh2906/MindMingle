@@ -16,7 +16,7 @@ object SampleGames {
             name = "Sudoku",
             description = "Sharpen your mind with logic puzzles",
             aboutGame = "Sudoku sharpens your logical thinking and concentration by challenging you to fill a 9x9 grid with numbers without repeats in rows, columns, or blocks. It’s a fun brain workout that boosts memory, patience, and problem-solving skills.",
-            imageResId = R.drawable.figma_sudoku,
+            imageResId = R.drawable.suddoku,
             cardColor = Color(0xFF56CCF2), // Light Blue
             xp = 1200,
             coins = listOf(
@@ -37,7 +37,7 @@ object SampleGames {
             name = "Math Memory",
             description = "Boost your memory and math skills",
             aboutGame = "Boost your memory and mental math skills by applying sequential math steps accurately. This game sharpens your focus, calculation, and cognitive agility in a fun and challenging way.",
-            imageResId = R.drawable.fourthone,
+            imageResId = R.drawable.final_math,
             cardColor = Color(0xFF6A0572), // Purple
             xp = 1500,
             coins = listOf(
@@ -46,18 +46,17 @@ object SampleGames {
             ),
             id = "math_memory",
             steps = listOf(
-                "The game shows a starting number that you must remember",
-                "Next, a sequence of math operations (like +2, -1, ×3) appears one after another.",
+                "A sequence of math operations (like +2, -1, ×3) appears one after another.",
                 "Your task is to apply these math steps in order, from left to right, starting with the initial number.",
                 "The game challenges your memory and math calculation skills by increasing the length and complexity of steps."
             ),
             isComingSoon = false,
         ),
         GameGridItem(
-            name = "Algebra Adventure",
-            description = "Master algebra through fun challenges",
-            imageResId = R.drawable.fourthone,
-            cardColor = Color(0xFFEF476F), // Pinkish Red
+            name = "Algebra Quest",
+            description = "Master algebra through fun challenge",
+            imageResId = R.drawable.final_algebra,
+            cardColor = Color(0xFFFF9800),
             xp = 900,
             coins = listOf(
                 "Earn coins by beating your previous best streak",

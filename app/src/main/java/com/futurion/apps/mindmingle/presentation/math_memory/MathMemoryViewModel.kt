@@ -71,6 +71,7 @@ class MathMemoryViewModel @Inject constructor(
     fun loadOrInitMathMemoryLevel() {
         viewModelScope.launch {
             val userId = statsRepo.initUserIfNeeded()
+            Log.d("MathMemoryVM", "Loading user progress for $userId")
             val profile = statsRepo.getProfile(userId)
 
             _totalXp.value = profile?.currentLevelXP ?: 0
@@ -117,25 +118,30 @@ class MathMemoryViewModel @Inject constructor(
     }
 
     private fun generateAnswerOptions(correct: Int): List<AnswerOption> {
-        val options = mutableSetOf(correct)
+        val cappedCorrect = correct.coerceAtMost(200)
+        val options = mutableSetOf(cappedCorrect)
         val rand = Random()
-        val maxOffset = maxOf(3, abs(correct) / 3)
+        val maxOffset = maxOf(3, abs(cappedCorrect) / 3)
         var attempts = 0
 
         while (options.size < 4 && attempts < 25) {
             val offset = rand.nextInt(maxOffset) + 1
-            val candidate = if (rand.nextBoolean()) correct + offset else correct - offset
-            if (candidate != correct) options.add(candidate)
+            val candidate = if (rand.nextBoolean()) cappedCorrect + offset else cappedCorrect - offset
+            val cappedCandidate = candidate.coerceIn(0, 200) // Cap options between 0 and 200
+            if (cappedCandidate != cappedCorrect) options.add(cappedCandidate)
             attempts++
         }
 
-        var fallbackValue = if (correct > 4) correct - 4 else 1
+        var fallbackValue = if (cappedCorrect > 4) cappedCorrect - 4 else 1
         while (options.size < 4) {
-            if (fallbackValue != correct && fallbackValue !in options) options.add(fallbackValue)
+            val cappedFallback = fallbackValue.coerceIn(0, 200)
+            if (cappedFallback != cappedCorrect && cappedFallback !in options) options.add(cappedFallback)
             fallbackValue++
         }
-        return options.shuffled().map { AnswerOption(it, it == correct) }
+
+        return options.shuffled().map { AnswerOption(it, it == cappedCorrect) }
     }
+
 
     fun onAction(action: MathMemoryAction) {
         when (action) {
@@ -174,7 +180,7 @@ class MathMemoryViewModel @Inject constructor(
                     viewModelScope.launch {
                         val userId = statsRepo.initUserIfNeeded()
                         // Save next level as current to resume from here
-                        maybeUpdateLevels(userId = userId, finishedLevel = completedLevel)
+                       maybeUpdateLevels(userId = userId, finishedLevel = completedLevel)
                     }
                     // Save the highest level reached
 

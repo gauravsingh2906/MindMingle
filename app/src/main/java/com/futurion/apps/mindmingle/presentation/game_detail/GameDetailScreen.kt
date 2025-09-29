@@ -102,12 +102,16 @@ fun GameDetailScreen(
                     )
                 },
                 actions = {
-                    IconButton(onClick = navigateToSudokuResult) {
-                        Icon(
-                            imageVector = Icons.Default.Refresh,
-                            contentDescription = "Back Arrow icon",
-                            tint = IconPrimary
-                        )
+                    AnimatedVisibility(
+                        visible = gameTitle=="Sudoku"
+                    ) {
+                        IconButton(onClick = navigateToSudokuResult) {
+                            Icon(
+                                imageVector = Icons.Default.Refresh,
+                                contentDescription = "Back Arrow icon",
+                                tint = IconPrimary
+                            )
+                        }
                     }
                 },
                 navigationIcon = {
@@ -144,10 +148,11 @@ fun GameDetailScreen(
             successContainerColor = SurfaceBrand,
             successContentColor = TextPrimary
         ) {
+            // Color(0xFFF7FAFC)
             Column(
                 modifier = modifier
                     .fillMaxSize()
-                    .background(Color(0xFFF7FAFC))
+                    .background(Color.White)
                     .padding(horizontal = 14.dp)
                     .verticalScroll(rememberScrollState()),
                 horizontalAlignment = Alignment.Start
@@ -281,14 +286,6 @@ fun GameDetailScreen(
                         color = TextPrimary,
                     )
                 }
-
-                Spacer(Modifier.height(16.dp))
-                // Motivational footer
-                Text(
-                    text = "Earn XP & Coins for each session. Beat your best score!",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = Color(0xFF444A53)
-                )
 
             }
         }

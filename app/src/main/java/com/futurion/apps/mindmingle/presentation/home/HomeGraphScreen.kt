@@ -5,21 +5,23 @@ import android.app.Activity
 import android.util.Log
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.ExperimentalAnimationApi
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.with
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.systemBarsPadding
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.Notifications
-import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -33,41 +35,41 @@ import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import com.futurion.apps.mindmingle.R
-
+import coil.compose.rememberAsyncImagePainter
 import com.futurion.apps.mindmingle.data.local.entity.OverallProfileEntity
-import com.futurion.apps.mindmingle.presentation.games.GameGridItem
-import com.futurion.apps.mindmingle.presentation.games.GamesScreen
+import com.futurion.apps.mindmingle.presentation.games.GameStats
+import com.futurion.apps.mindmingle.presentation.games.GamesScreenWithStats
 import com.futurion.apps.mindmingle.presentation.games.SampleGames.gameItems
-import com.futurion.apps.mindmingle.presentation.home.component.BottomBarNavigation
+import com.futurion.apps.mindmingle.presentation.home.component.AnimatedCoinsChip
 import com.futurion.apps.mindmingle.presentation.home.domain.BottomBarDestination
 import com.futurion.apps.mindmingle.presentation.mind_mingle.MindMingleScreen
 import com.futurion.apps.mindmingle.presentation.navigation.Screen
 import com.futurion.apps.mindmingle.presentation.profile.ProfileScreen
-import com.futurion.apps.mindmingle.presentation.profile.StatChip
 import com.futurion.apps.mindmingle.presentation.profile.StatsViewModel
 import com.futurion.apps.mindmingle.presentation.utils.AppBackground
 import com.futurion.apps.mindmingle.presentation.utils.BebasNeueFont
 import com.futurion.apps.mindmingle.presentation.utils.FontSize
-import com.futurion.apps.mindmingle.presentation.utils.IconPrimary
 import com.futurion.apps.mindmingle.presentation.utils.Surface
-import com.futurion.apps.mindmingle.presentation.utils.TextPrimary
 import rememberMessageBarState
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalAnimationApi::class)
 @Composable
 fun HomeGraphScreen(
     modifier: Modifier = Modifier,
+    viewModel: StatsViewModel,
+    profile: OverallProfileEntity,
     navigateToGameDetail: (String) -> Unit,
-    coins: String
+    coins: Int
 ) {
 
     val navController = rememberNavController()
@@ -88,6 +90,9 @@ fun HomeGraphScreen(
 
     val messageBarState = rememberMessageBarState()
 
+
+
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -98,82 +103,78 @@ fun HomeGraphScreen(
         Scaffold(
             containerColor = AppBackground,
             topBar = {
-                TopAppBar(
-                    title = {
-                        AnimatedContent(
-                            targetState = selectedDestination
-                        ) { destination ->
-                            Text(
-                                text = destination.title,
-                                fontFamily = BebasNeueFont(),
-                                fontSize = FontSize.LARGE,
-                                color = TextPrimary
-                            )
-                        }
-                    },
-                    navigationIcon = {
-
-                        AnimatedVisibility(
-                            visible = selectedDestination != BottomBarDestination.Games
-                        ) {
-
-                            IconButton(
-                                onClick = {
-                                    navController.navigate(Screen.Games)
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                ) {
+                    TopAppBar(
+                        modifier = Modifier
+                            .fillMaxWidth(),
+                        title = {
+                            AnimatedContent(
+                                targetState = selectedDestination,
+                                transitionSpec = {
+                                    fadeIn(animationSpec = tween(300)) with fadeOut(
+                                        animationSpec = tween(
+                                            300
+                                        )
+                                    )
                                 }
-                            ) {
-                                Icon(
-                                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                                    contentDescription = "Menu",
-                                    tint = IconPrimary
+                            ) { destination ->
+                                Text(
+                                    text = destination.title,
+                                    fontFamily = BebasNeueFont(),
+                                    fontSize = FontSize.LARGE,
+                                    color = Color.Black
                                 )
                             }
-                        }
-
-//                        IconButton(
-//                            onClick = {
-//                                navController.navigate(Screen.Games)
-//                            }
-//                        ) {
-//                            AnimatedVisibility(
-//                                visible = selectedDestination == BottomBarDestination.Games
-//                            ) {
-//                                Icon(
-//                                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-//                                    contentDescription = "Menu",
-//                                    tint = IconPrimary
-//                                )
-//                            }
-//                        }
-                    },
-                    actions = {
-
-                        StatChip(icon = "💰", label = "Coins", value = coins)
-
-                        IconButton(
-                            onClick = {
-                                navController.navigate(Screen.Profile)
-                            }
-                        ) {
+                        },
+                        navigationIcon = {
                             AnimatedVisibility(
-                                visible = selectedDestination == BottomBarDestination.Games
+                                visible = selectedDestination != BottomBarDestination.Games
                             ) {
-                                Icon(
-                                    imageVector = Icons.Default.Person,
-                                    contentDescription = "Menu",
-                                    tint = IconPrimary
-                                )
+                                IconButton(
+                                    onClick = {
+                                        viewModel.loadProfile(profile.userId)
+                                        navController.navigate(Screen.Games)
+                                    }
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                        contentDescription = "Back",
+                                        tint = Color.Black
+                                    )
+                                }
                             }
-                        }
-                    },
-                    colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = Surface,
-                        scrolledContainerColor = Surface,
-                        navigationIconContentColor = IconPrimary,
-                        titleContentColor = TextPrimary,
-                        actionIconContentColor = IconPrimary
+                        },
+                        actions = {
+                            //    StatChip(icon = "💰", label = "Coins", value = coins)
+
+                            AnimatedCoinsChip(viewModel.profile.collectAsStateWithLifecycle().value?.coins ?: 0)
+                            AnimatedVisibility(visible = selectedDestination == BottomBarDestination.Games) {
+                                IconButton(
+                                    onClick = {
+                                        navController.navigate(Screen.Profile)
+                                    }
+                                ) {
+                                    Image(
+                                        painter = rememberAsyncImagePainter(model = profile.avatarUri),
+                                        contentDescription = "Avatar",
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .clip(CircleShape)
+                                    )
+                                }
+                            }
+                        },
+                        colors = TopAppBarDefaults.topAppBarColors(
+                            containerColor = Color.White, // transparent because gradient is behind
+                            navigationIconContentColor = Color.White,
+                            titleContentColor = Color.White,
+                            actionIconContentColor = Color.White
+                        ),
                     )
-                )
+                }
             }
         ) { paddingValues ->
             ContentWithMessageBar(
@@ -199,10 +200,75 @@ fun HomeGraphScreen(
                             MindMingleScreen()
                         }
                         composable<Screen.Games> {
-                            GamesScreen(
+
+
+                        //    val viewModel : StatsViewModel = hiltViewModel()
+
+//                            val sudokuViewModel: SudokuViewModel = hiltViewModel()
+//
+//                            val stats = viewModel.profile.collectAsState().value
+//
+//                            val userId = viewModel.userId.collectAsState().value
+//
+//                            // val ids = viewModel.loadProfile(userId = userId ?: "212")
+//
+//                            val perGameStats = viewModel.gameStats.collectAsState().value
+//
+                            val perStats = viewModel.perGameStats.collectAsState().value
+
+                            //    val game = sudokuViewModel.getGameById(id)
+
+
+                            GamesScreenWithStats(
+                                games = gameItems,
                                 onGameClick = navigateToGameDetail,
-                                games = gameItems
+                                statsForGame = { id ->
+
+                                    val entity = perStats.find { it.gameName == id }
+                                    Log.d("Stats", entity.toString())
+
+                                    if (entity != null) {
+                                        GameStats(
+                                            gamesPlayed = entity.gamesPlayed,
+                                            wins = entity.wins,
+                                            xpTotal = entity.xp,
+                                            currentStreak = entity.currentStreak
+                                        )
+
+                                    } else {
+                                        GameStats()
+                                    }
+
+
+                                }
                             )
+
+//                            GamesScreen(
+//                                statsForGame = { id ->
+//
+//                                    val entity = perStats.find { it.gameName == id }
+//                                    Log.d("Stats", entity.toString())
+//
+//                                    if (entity != null) {
+//                                        GameStats(
+//                                            gamesPlayed = entity.gamesPlayed,
+//                                            wins = entity.wins,
+//                                            xpTotal = entity.xp,
+//                                            currentStreak = entity.currentStreak
+//                                        )
+//
+//                                    } else {
+//                                        GameStats(
+//                                            gamesPlayed = 4,
+//                                            wins = 2,
+//                                            xpTotal = 100,
+//                                            currentStreak = 3
+//                                        )
+//                                    }
+//                                },
+//                                onGameClick = navigateToGameDetail,
+//                                games = gameItems
+//                            )
                         }
                         composable<Screen.Profile> {
 
@@ -210,26 +276,24 @@ fun HomeGraphScreen(
                             val activity = context as Activity
 
                             val statsViewModel: StatsViewModel = hiltViewModel()
-                            val profile by statsViewModel.profile.collectAsState() // Use Flow/LiveData/State
-                            val perGameStats by statsViewModel.perGameStats.collectAsState()
+                            val profile by statsViewModel.profile.collectAsStateWithLifecycle() // Use Flow/LiveData/State
+                            val perGameStats by statsViewModel.perGameStats.collectAsStateWithLifecycle()
 
-                            val userId = statsViewModel.userId.value
+                            val userId = statsViewModel.userId.collectAsStateWithLifecycle().value
                             val us = "d41e5130-eacf-401a-bd03-e0cb4c0c9a96"
-                            Log.d("User", userId.toString())
+                            Log.d("User", "tab$userId")
 
-//                            val rewardedAdManager = remember {
-//                                RewardedAdManager(context, "ca-app-pub-3940256099942544/5224354917")
-//                            }
 
                             ProfileScreen(
-                                profile = profile
-                                    ?: OverallProfileEntity(userId = "1\tc97f320d-4681-4e07-aeca-f305ea33d7e9\tsudoku\t2\t0\t2\t0\t20\t1\t3\t1\t6\t20",),
+                                profile = profile ?: OverallProfileEntity(userId = "1\tc97f320d-4681-4e07-aeca-f305ea33d7e9\tsudoku\t2\t0\t2\t0\t20\t1\t3\t1\t6\t20"),
                                 perGameStats = perGameStats,
+                                navigateToProfileScreen = {
+                                    navController.navigate(Screen.GameDetailScreen)
+                                }
                             )
                         }
 
                     }
-
 
 
                 }
@@ -239,6 +303,12 @@ fun HomeGraphScreen(
 
     }
 
+}
+
+fun Brush.toBrushColor(): Color {
+    // Compose doesn’t support brush directly in TopAppBarColors; workaround:
+    // Use a transparent or base color and paint gradient behind the TopAppBar Box if needed.
+    return Color(0xFF667EEA) // fallback: use gradient’s start color
 }
 
 
