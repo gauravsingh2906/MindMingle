@@ -1,0 +1,9 @@
+package com.futurion.apps.mathmingle.domain.model
+
+import com.futurion.apps.mathmingle.R
+
+enum class Difficulty(val blanks: IntRange,val icon: Int) {
+    EASY(blanks = 36..40, icon = R.drawable.user),
+    MEDIUM(41..46,icon = R.drawable.user),
+    HARD(47..54,icon = R.drawable.user)
+}

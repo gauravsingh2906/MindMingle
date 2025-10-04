@@ -19,6 +19,6 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "MindMingle"
+rootProject.name = "MathMingle"
 include(":app")
  

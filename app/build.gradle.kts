@@ -10,11 +10,11 @@ plugins {
 }
 
 android {
-    namespace = "com.futurion.apps.mindmingle"
+    namespace = "com.futurion.apps.mathmingle"
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.futurion.apps.mindmingle"
+        applicationId = "com.futurion.apps.mathmingle"
         minSdk = 24
         targetSdk = 36
         versionCode = 1
