@@ -45,7 +45,6 @@ import kotlin.math.cos
 import kotlin.math.sin
 
 
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun GameResultScreen(
@@ -72,7 +71,7 @@ fun GameResultScreen(
 
     BackHandler {
         onHome()
-     //   navigateToGameDetail(gameTypeq)
+        //   navigateToGameDetail(gameTypeq)
     }
 
 
@@ -316,7 +315,7 @@ fun GameResultScreen(
 //                }
 //            }
 
-       //     Spacer(modifier = Modifier.height(40.dp))
+            //     Spacer(modifier = Modifier.height(40.dp))
 
             // 🎮 Action Buttons
             AnimatedVisibility(
@@ -340,8 +339,12 @@ fun GameResultScreen(
                     AllGames.SUDOKU -> SudokuActionButtons(
                         data = data,
                         currentDifficulty = currentDifficulty,
-                        onReplay = { onReplay(0, currentDifficulty) },
-                        onNext = { difficulty -> onReplay(0, difficulty) },
+                        onReplay = {
+                            onReplay(0, currentDifficulty)
+                        },
+                        onNext = { difficulty ->
+                            onReplay(0, difficulty)
+                        },
                         onHome = onHome
                     )
 
@@ -720,8 +723,8 @@ private fun SudokuActionButtons(
         // Try Harder Difficulty (if won and not already hardest)
         if (data.won == true && currentDifficulty.lowercase() != "expert") {
             val nextDifficulty = when (currentDifficulty.lowercase()) {
-                "easy" -> "Medium"
-                "medium" -> "Hard"
+                "easy" -> "MEDIUM"
+                "medium" -> "HARD"
                 "hard" -> "Expert"
                 else -> "Medium"
             }
@@ -761,7 +764,7 @@ private fun SudokuActionButtons(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             modifier = Modifier.fillMaxWidth()
         ) {
-            val difficulties = listOf("Easy", "Medium", "Hard", "Expert")
+            val difficulties = listOf("EASY", "MEDIUM", "HARD")
             difficulties.forEach { difficulty ->
                 DifficultyButton(
                     text = difficulty,

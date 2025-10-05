@@ -32,7 +32,7 @@ data class LevelConfig(val level: Int) {
             level <= 10 -> 12
             level <= 15 -> 14
             level <= 20 -> 16
-            else -> 5
+            else -> 20
         }
     }
 

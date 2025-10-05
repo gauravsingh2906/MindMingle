@@ -26,10 +26,10 @@ fun OverallStatsCard(profile: OverallProfileEntity) {
         "Win %" to if (profile.totalGamesPlayed > 0) {
             "${(profile.totalWins * 100) / profile.totalGamesPlayed}%"
         } else "0%",
-        "XP" to profile.totalXP.toString(),
-        "Level" to profile.overallHighestLevel.toString(),
-        "Hints" to "${profile.totalHintsUsed}m"
+        "Total XP" to profile.totalXP.toString(),
+        "Hints" to "${profile.totalHintsUsed}"
     )
+    // "Level" to profile.overallHighestLevel.toString(),
 
     Card(
         modifier = Modifier

@@ -69,58 +69,64 @@ class MathMemoryViewModel @Inject constructor(
         setNewLevel(levelManager.currentLevel())
     }
 
-    fun generateMemoryLevel(levelNumber: Int): MemoryLevel {
-        val numCards = minOf(2 + levelNumber / 2, 8)
+    private val _remainingSkips = MutableStateFlow(3)
+    val remainingSkips: StateFlow<Int> = _remainingSkips
 
-        // Max answer grows with level
-        val maxAnswer = when {
-            levelNumber <= 5 -> 50
-            levelNumber <= 10 -> 100
-            levelNumber <= 15 -> 150
-            else -> 200
-        }
 
-        val weightedOps = when {
-            levelNumber < 5 -> listOf(Operations.ADD)
-            levelNumber < 10 -> listOf(Operations.ADD, Operations.SUB)
-            levelNumber < 15 -> listOf(Operations.ADD, Operations.SUB, Operations.MUL, Operations.MUL)
-            else -> Operations.entries.toList()
-        }
 
-        val cardValuesRangeAddSub = if (levelNumber < 5) 1..5 else 1..9
-        val cardValuesRangeMul = when {
-            levelNumber < 10 -> listOf(2)
-            levelNumber < 15 -> (2..3).toList()
-            else -> (2..4).toList()
-        }
 
-        val cards = mutableListOf<MemoryCard>()
-        var currentValue = (0..10).random().coerceAtMost(maxAnswer)
-        val start = currentValue
-
-        repeat(numCards) {
-            val op = weightedOps.random()
-            val value = when (op) {
-                Operations.ADD -> cardValuesRangeAddSub.filter { it + currentValue <= maxAnswer }.randomOrNull() ?: 1
-                Operations.SUB -> cardValuesRangeAddSub.filter { it <= currentValue }.randomOrNull() ?: 1
-                Operations.MUL -> cardValuesRangeMul.filter { it * currentValue <= maxAnswer }.randomOrNull() ?: 1
-                Operations.DIV -> (2..4).filter { it != 0 && currentValue / it <= maxAnswer }.randomOrNull() ?: 1
-            }
-
-            cards.add(MemoryCard(op, value))
-
-            currentValue = when (op) {
-                Operations.ADD -> currentValue + value
-                Operations.SUB -> currentValue - value
-                Operations.MUL -> currentValue * value
-                Operations.DIV -> if (value != 0) currentValue / value else currentValue
-            }
-
-            currentValue = currentValue.coerceIn(0, maxAnswer)
-        }
-
-        return MemoryLevel(levelNumber, cards, start, maxAnswer)
-    }
+//    fun generateMemoryLevel(levelNumber: Int): MemoryLevel {
+//        val numCards = minOf(2 + levelNumber / 2, 8)
+//
+//        // Max answer grows with level
+//        val maxAnswer = when {
+//            levelNumber <= 5 -> 50
+//            levelNumber <= 10 -> 100
+//            levelNumber <= 15 -> 150
+//            else -> 200
+//        }
+//
+//        val weightedOps = when {
+//            levelNumber < 5 -> listOf(Operations.ADD)
+//            levelNumber < 10 -> listOf(Operations.ADD, Operations.SUB)
+//            levelNumber < 15 -> listOf(Operations.ADD, Operations.SUB, Operations.MUL, Operations.MUL)
+//            else -> Operations.entries.toList()
+//        }
+//
+//        val cardValuesRangeAddSub = if (levelNumber < 5) 1..5 else 1..9
+//        val cardValuesRangeMul = when {
+//            levelNumber < 10 -> listOf(2)
+//            levelNumber < 15 -> (2..3).toList()
+//            else -> (2..4).toList()
+//        }
+//
+//        val cards = mutableListOf<MemoryCard>()
+//        var currentValue = (0..10).random().coerceAtMost(maxAnswer)
+//        val start = currentValue
+//
+//        repeat(numCards) {
+//            val op = weightedOps.random()
+//            val value = when (op) {
+//                Operations.ADD -> cardValuesRangeAddSub.filter { it + currentValue <= maxAnswer }.randomOrNull() ?: 1
+//                Operations.SUB -> cardValuesRangeAddSub.filter { it <= currentValue }.randomOrNull() ?: 1
+//                Operations.MUL -> cardValuesRangeMul.filter { it * currentValue <= maxAnswer }.randomOrNull() ?: 1
+//                Operations.DIV -> (2..4).filter { it != 0 && currentValue / it <= maxAnswer }.randomOrNull() ?: 1
+//            }
+//
+//            cards.add(MemoryCard(op, value))
+//
+//            currentValue = when (op) {
+//                Operations.ADD -> currentValue + value
+//                Operations.SUB -> currentValue - value
+//                Operations.MUL -> currentValue * value
+//                Operations.DIV -> if (value != 0) currentValue / value else currentValue
+//            }
+//
+//            currentValue = currentValue.coerceIn(0, maxAnswer)
+//        }
+//
+//        return MemoryLevel(levelNumber, cards, start, maxAnswer)
+//    }
 
     fun loadOrInitMathMemoryLevel() {
         viewModelScope.launch {
@@ -160,7 +166,7 @@ class MathMemoryViewModel @Inject constructor(
 
     private fun setNewLevel(level: MemoryLevel) {
         _uiState.value = _uiState.value.copy(game = MathMemoryGameState(level))
-        _answerOptions.value = generateAnswerOptions(level.correctAnswer)
+        _answerOptions.value = generateAnswerOptions(level.correctAnswer, level.number)
     }
 
     private fun maybeUpdateLevels(userId: String, finishedLevel: Int) {
@@ -171,34 +177,145 @@ class MathMemoryViewModel @Inject constructor(
         }
     }
 
-    private fun generateAnswerOptions(correct: Int): List<AnswerOption> {
+//    private fun generateAnswerOptions(correct: Int): List<AnswerOption> {
+//        val options = mutableSetOf(correct)
+//        val rand = Random()
+//        val maxOffset = 20 // maximum difference for distractors
+//        var attempts = 0
+//
+//        while (options.size < 4 && attempts < 50) {
+//            val offset = rand.nextInt(maxOffset) + 1
+//            val candidate = if (rand.nextBoolean()) correct + offset else correct - offset
+//
+//            // Only include candidate if within -200..200 and not already in options
+//            if (candidate != correct && candidate in -200..200) {
+//                options.add(candidate)
+//            }
+//            attempts++
+//        }
+//
+//        // Fallback loop to fill any missing options
+//        var fallback = correct - maxOffset
+//        while (options.size < 4) {
+//            if (fallback != correct && fallback in -200..200) {
+//                options.add(fallback)
+//            }
+//            fallback++
+//        }
+//
+//        return options.shuffled().map { AnswerOption(it, it == correct) }
+//    }
+
+    // Inside MathMemoryViewModel.kt
+
+    fun generateAnswerOptions(correct: Int, level: Int): List<AnswerOption> {
+        val spread = when {
+            level <= 10 -> 10
+            level <= 20 -> 20
+            level <= 30 -> 30
+            level <= 40 -> 40
+            else -> 50
+        }
+
         val options = mutableSetOf(correct)
         val rand = Random()
-        val maxOffset = 20 // maximum difference for distractors
-        var attempts = 0
 
-        while (options.size < 4 && attempts < 50) {
-            val offset = rand.nextInt(maxOffset) + 1
-            val candidate = if (rand.nextBoolean()) correct + offset else correct - offset
-
-            // Only include candidate if within -200..200 and not already in options
+        while (options.size < 4) {
+            val candidate = correct + rand.nextInt(spread * 2 + 1) - spread
             if (candidate != correct && candidate in -200..200) {
                 options.add(candidate)
             }
-            attempts++
-        }
-
-        // Fallback loop to fill any missing options
-        var fallback = correct - maxOffset
-        while (options.size < 4) {
-            if (fallback != correct && fallback in -200..200) {
-                options.add(fallback)
-            }
-            fallback++
         }
 
         return options.shuffled().map { AnswerOption(it, it == correct) }
     }
+
+
+    // last one
+//    private fun generateAnswerOptions(
+//        correct: Int,
+//        numOptions: Int = 4
+//    ): List<AnswerOption> {
+//        val options = mutableSetOf<Int>()
+//        options.add(correct) // **Crucially, the correct answer is always added first.**
+//
+//        val rnd = kotlin.random.Random
+//
+//        // Dynamic offset based on the magnitude of the correct answer.
+//        // E.g., if correct is 6, maxOffset is 5. If correct is 100, maxOffset is ~33.
+//        val maxOffset = (maxOf(5, kotlin.math.abs(correct) / 3)).coerceIn(5, 50)
+//
+//        // This is a minimum offset to ensure distractors are not immediately adjacent (e.g., 7 for 6).
+//        // For small numbers, a min offset of 1 or 2 is fine. For larger numbers, it helps.
+//        val minOffset = maxOf(1, correct / 10).coerceAtMost(3)
+//
+//        var attempts = 0
+//        while (options.size < numOptions && attempts < 50) {
+//            // Generate offset greater than minOffset
+//            val offset = rnd.nextInt(minOffset, maxOffset + 1)
+//
+//            // Candidate is either correct + offset or correct - offset
+//            val candidate = if (rnd.nextBoolean()) correct + offset else correct - offset
+//
+//            // Ensure the distractor is not the correct answer and not already in the set
+//            if (candidate != correct) {
+//                options.add(candidate)
+//            }
+//            attempts++
+//        }
+//
+//        // Fallback to fill options if still short
+//        // Start fallback from a safe distance (maxOffset away)
+//        var fallback = correct - maxOffset
+//        while (options.size < numOptions) {
+//            if (fallback != correct && fallback !in options) {
+//                options.add(fallback)
+//            }
+//            fallback++
+//        }
+//
+//        val finalList = options.shuffled().map { AnswerOption(it, it == correct) }
+//
+//        Log.d("OptionsGen", "Correct=$correct, Options=$finalList")
+//
+//        return finalList
+//    }
+
+//    private fun generateAnswerOptions(
+//        correct: Int,
+//        numOptions: Int = 4
+//    ): List<AnswerOption> {
+//        val options = mutableSetOf<Int>()
+//        options.add(correct) // always include correct
+//
+//        val rnd = kotlin.random.Random
+//        val maxOffset = (maxOf(5, kotlin.math.abs(correct) / 3)) // difficulty scaling
+//
+//        var attempts = 0
+//        while (options.size < numOptions && attempts < 50) {
+//            val offset = rnd.nextInt(1, maxOffset + 1)
+//            val candidate = if (rnd.nextBoolean()) correct + offset else correct - offset
+//
+//            if (candidate != correct) {
+//                options.add(candidate)
+//            }
+//            attempts++
+//        }
+//
+//        // Fallback to fill options if still short
+//        var fallback = correct - maxOffset
+//        while (options.size < numOptions) {
+//            if (fallback != correct) options.add(fallback)
+//            fallback++
+//        }
+//
+//        val finalList = options.shuffled().map { AnswerOption(it, it == correct) }
+//
+//        Log.d("OptionsGen", "Correct=$correct, Options=$finalList")
+//
+//        return finalList
+//    }
+
 
 
 
@@ -242,6 +359,40 @@ class MathMemoryViewModel @Inject constructor(
                     game = _uiState.value.game.copy(userInput = action.value)
                 )
             }
+
+            is MathMemoryAction.SkipLevel -> {
+                if (_remainingSkips.value > 0) {
+                    _remainingSkips.value -= 1
+
+                    viewModelScope.launch {
+                        val userId = statsRepo.initUserIfNeeded()
+                        statsRepo.updateGameResult(
+                            userId = userId,
+                            gameName = "math_memory",
+                            levelReached = levelManager.currentLevel().number,
+                            won = false,
+                            xpGained = 0,
+                            coinsEarned = 0,
+                            hintsUsed = _hintsUsed.value,
+                            timeSpentSeconds = 0,
+                            currentStreak = _currentStreak.value,
+                            bestStreak = _bestStreak.value,
+                            isMatchWon = false,
+                            mathMemoryLevel = levelManager.currentLevel().number + 1,
+                            mathMemoryHighestLevel = levelManager.currentLevel().number,
+                            resultTitle = "skip",
+                            resultMessage = "skip",
+                            eachGameXp = 0,
+                            eachGameCoin = 0
+                        )
+                        // go next
+                        levelManager.nextLevel()
+                        setNewLevel(levelManager.currentLevel())
+                    }
+                }
+            }
+
+
 
             is MathMemoryAction.SubmitAnswer -> {
                 val isCorrect = _uiState.value.game.userInput.toIntOrNull() ==

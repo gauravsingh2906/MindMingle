@@ -5,6 +5,7 @@ import android.util.Log
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.animateIntAsState
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
@@ -151,7 +152,7 @@ fun ProfileScreen(
             .fillMaxSize()
             .background(Color.White)
             .verticalScroll(rememberScrollState())
-            .padding(vertical = 24.dp),
+            .padding(bottom = 24.dp, top = 5.dp),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
@@ -268,23 +269,23 @@ fun UsernameChangeDialog(
                 Spacer(Modifier.height(16.dp))
 
                 // Special unlockable usernames section
-                Text("Special Usernames:", style = MaterialTheme.typography.titleMedium)
-
-                LazyVerticalGrid(
-                    columns = GridCells.Fixed(2),
-                    modifier = Modifier
-                        .heightIn(max = 200.dp)
-                        .padding(vertical = 8.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    items(unlockedUsernames) { username ->
-                        SpecialUsernameItem(
-                            username = username,
-                            onClick = { onUnlockSpecial(username) }
-                        )
-                    }
-                }
+//                Text("Special Usernames:", style = MaterialTheme.typography.titleMedium)
+//
+//                LazyVerticalGrid(
+//                    columns = GridCells.Fixed(2),
+//                    modifier = Modifier
+//                        .heightIn(max = 200.dp)
+//                        .padding(vertical = 8.dp),
+//                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+//                    verticalArrangement = Arrangement.spacedBy(8.dp)
+//                ) {
+//                    items(unlockedUsernames) { username ->
+//                        SpecialUsernameItem(
+//                            username = username,
+//                            onClick = { onUnlockSpecial(username) }
+//                        )
+//                    }
+//                }
             }
         },
         confirmButton = {
@@ -308,39 +309,6 @@ fun UsernameChangeDialog(
     )
 }
 
-@Composable
-fun SpecialUsernameItem(
-    username: String,
-    onClick: () -> Unit,
-) {
-    // Glowing effect colors
-    val glowColors = listOf(
-        Color(0xFF6A8BFF).copy(alpha = 0.8f),
-        Color(0xFFB46CFF).copy(alpha = 0.6f),
-        Color(0xFF6A8BFF).copy(alpha = 0.4f),
-        Color(0xFFB46CFF).copy(alpha = 0.2f),
-    )
-
-    Box(
-        modifier = Modifier
-            .clip(RoundedCornerShape(16.dp))
-            .background(
-                Brush.verticalGradient(glowColors)
-            )
-            .clickable { onClick() }
-            .padding(horizontal = 16.dp, vertical = 12.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Text(
-            text = username,
-            color = Color.White,
-            fontWeight = FontWeight.Bold,
-            fontSize = 16.sp,
-            modifier = Modifier
-        )
-    }
-}
-
 
 @Composable
 fun AvatarUnlockDialog(
@@ -356,12 +324,14 @@ fun AvatarUnlockDialog(
 ) {
     val avatarList = listOf(
         R.drawable.avatar_1 to UnlockCondition.AlwaysUnlocked,
-        R.drawable.avatar_2 to UnlockCondition.Level(5),
-        R.drawable.avatar_4 to UnlockCondition.Coins(1500),
-        R.drawable.avatar_5 to UnlockCondition.Coins(3000),
-        R.drawable.avatar_6 to UnlockCondition.Level(10),
-        R.drawable.avatar_7 to UnlockCondition.Level(15),
-        R.drawable.avatar_special_1 to UnlockCondition.Level(30),
+        R.drawable.free_avatar to UnlockCondition.Level(5),
+        R.drawable.avatar_4 to UnlockCondition.Coins(500),
+        R.drawable.avatar_11 to UnlockCondition.Level(10),
+        R.drawable.avatar_9 to UnlockCondition.Level(15),
+        R.drawable.avatar_10 to UnlockCondition.Level(25),
+        R.drawable.avatar_5 to UnlockCondition.Coins(1500),
+        R.drawable.avatar_anime to UnlockCondition.Level(40),
+        R.drawable.avatar_anime1 to UnlockCondition.Level(50),
     )
 
     val context = LocalContext.current
@@ -481,6 +451,7 @@ fun AvatarUnlockDialog(
                                             fontSize = 10.sp,
                                             color = Color.Gray
                                         )
+
                                     }
                                 }
 
@@ -529,7 +500,7 @@ fun AnimatedAvatarSection(
 
     Box(
         modifier = Modifier
-            .size(120.dp)
+            .size(110.dp)
             .clickable { onAvatarClick() },
         contentAlignment = Alignment.Center
     ) {
@@ -598,7 +569,7 @@ fun ProfileHeader(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp)
+            .padding(horizontal = 10.dp)
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -610,10 +581,10 @@ fun ProfileHeader(
                 avatarRes = avatarRes,
                 username = username,
                 onAvatarClick = onAvatarClick,
-                onEditClick = onUsernameClick
+                onEditClick = onAvatarClick
             )
 
-            Spacer(Modifier.width(16.dp))
+            Spacer(Modifier.width(12.dp))
 
             Column(
                 verticalArrangement = Arrangement.Center,
@@ -626,21 +597,24 @@ fun ProfileHeader(
                     onEditClicked = onUsernameClick
                 )
 
-                Spacer(Modifier.height(8.dp))
+                Spacer(Modifier.height(4.dp))
+
+                val animatedCoins by animateIntAsState(
+                    coins.toInt(), tween(durationMillis = 800, easing = FastOutSlowInEasing)
+                )
 
                 // Coins display
                 Row(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(
+                    Image(
                         painter = painterResource(R.drawable.figma_coin), // Replace with coin drawable
                         contentDescription = "Coins",
-                        tint = Color(0xFFFFC107),
-                        modifier = Modifier.size(20.dp)
+                        modifier = Modifier.size(30.dp)
                     )
                     Spacer(Modifier.width(4.dp))
                     Text(
-                        text = coins,
+                        text = "$animatedCoins Coins",
                         fontWeight = FontWeight.Bold,
                         fontSize = 16.sp,
                         color = Color(0xFF333333)
@@ -691,7 +665,7 @@ private fun validateUsername(username: String): String? {
     return when {
         username.isBlank() -> "Please enter your name."
         username.length < 3 -> "Name is too short."
-        username.length > 20 -> "Name is too long."
+        username.length > 18 -> "Name is too long."
         else -> null
     }
 }

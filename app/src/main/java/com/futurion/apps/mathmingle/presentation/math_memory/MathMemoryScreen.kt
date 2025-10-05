@@ -2,6 +2,7 @@ package com.futurion.apps.mathmingle.presentation.math_memory
 
 import android.annotation.SuppressLint
 import android.app.Activity
+import android.util.Log
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
@@ -67,6 +68,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.futurion.apps.mathmingle.GoogleRewardedAdManager
 import com.futurion.apps.mathmingle.R
 import com.futurion.apps.mathmingle.domain.model.AnswerOption
@@ -111,7 +113,6 @@ fun MathMemoryScreen(
     }
 
 
-
 //    LaunchedEffect(uiState.game.level, uiState.game.isShowCards) {
 //        if (uiState.game.isShowCards) {
 //            val baseDelay = 2400L
@@ -125,9 +126,12 @@ fun MathMemoryScreen(
                 levelNumber = uiState.game.level.number,
                 numCards = uiState.game.level.cards.size
             )
+            Log.d("MathMemoryScreen", "totalTime: $totalTime")
             viewModel.startMemorizationTimer1(totalTime)
         }
     }
+
+    val remainingSkips by viewModel.remainingSkips.collectAsStateWithLifecycle()
 
 
     var secondChanceUsed by remember(uiState.game.level.number) { mutableStateOf(false) }
@@ -240,33 +244,33 @@ fun MathMemoryScreen(
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
 
-                        ThemeSelector(
-                            builtInThemes = Default,
-                            selectedTheme = theme,
-                            unlockedNames = uiState.theme.unlockedThemes,
-                            onSelect = { viewModel.onAction(MathMemoryAction.SelectTheme(it)) }
-                        )
+                    ThemeSelector(
+                        builtInThemes = Default,
+                        selectedTheme = theme,
+                        unlockedNames = uiState.theme.unlockedThemes,
+                        onSelect = { viewModel.onAction(MathMemoryAction.SelectTheme(it)) }
+                    )
 
-                        Box(
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        contentAlignment = Alignment.Center // Top right
+                    ) {
+                        IconButton(
+                            onClick = { navigateToThemeUnlock(userId) },
                             modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(16.dp),
-                            contentAlignment = Alignment.Center // Top right
+                                .size(48.dp)
+                                .background(Color.White.copy(alpha = 0.9f), CircleShape)
+                                .border(1.dp, Color.Gray, CircleShape)
                         ) {
-                            IconButton(
-                                onClick = { navigateToThemeUnlock(userId) },
-                                modifier = Modifier
-                                    .size(48.dp)
-                                    .background(Color.White.copy(alpha = 0.9f), CircleShape)
-                                    .border(1.dp, Color.Gray, CircleShape)
-                            ) {
-                                Icon(
-                                    painter = painterResource(R.drawable.theme), // Replace with your theme icon
-                                    contentDescription = "Theme Selector",
-                                    tint = Color(0xFF6A8BFF)
-                                )
-                            }
+                            Icon(
+                                painter = painterResource(R.drawable.theme), // Replace with your theme icon
+                                contentDescription = "Theme Selector",
+                                tint = Color(0xFF6A8BFF)
+                            )
                         }
+                    }
 
 
 
@@ -446,6 +450,17 @@ fun MathMemoryScreen(
                                 )
                                 Spacer(Modifier.height(8.dp))
 
+                                Button(
+                                    onClick = {
+                                     //   viewModel.useSkip()
+                                        viewModel.onAction(MathMemoryAction.SkipLevel)
+                                    },
+                                    enabled = remainingSkips > 0
+                                ) {
+                                    Text("Skip")
+                                }
+
+
                                 if (!secondChanceUsed) {
                                     Button(
                                         onClick = {
@@ -514,7 +529,6 @@ fun getMemorizationTime(levelNumber: Int, numCards: Int): Long {
     val difficultyFactor = 1 + levelNumber / 10f // higher levels slightly slower
     return ((baseTime + numCards * perCardTime) * difficultyFactor).toLong()
 }
-
 
 
 @Composable
@@ -623,7 +637,8 @@ fun ResultFullScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(24.dp)
+                .padding(horizontal = 12.dp)
+                .padding(bottom = 12.dp)
                 .verticalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {

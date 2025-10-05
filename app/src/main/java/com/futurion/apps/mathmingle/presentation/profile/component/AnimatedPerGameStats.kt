@@ -18,8 +18,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -58,7 +61,7 @@ fun AnimatedPerGameStats(
             visible = profile.totalGamesPlayed > 0
         ) {
             Text(
-                text = "Per Game Stats",
+                text = "Each Game Stats",
                 fontFamily = RobotoCondensedFont(),
                 fontWeight = FontWeight.Bold,
                 fontSize = 20.sp,
@@ -73,6 +76,8 @@ fun AnimatedPerGameStats(
         ) {
             items(perGameStats.size) { index ->
                 val stat = perGameStats[index]
+
+
 
                 AnimatedVisibility(
                     visible = true,

@@ -2,6 +2,7 @@ package com.futurion.apps.mathmingle.presentation.sudoku
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -107,140 +108,125 @@ fun SudokuScreen(
             )
         }
     ) { it ->
-        Column(
-            modifier = modifier
+        Box(
+            modifier = Modifier
                 .fillMaxSize()
                 .background(Color.White)
                 .padding(it)
-                .padding(horizontal = 16.dp)
-                .padding(bottom = 16.dp)
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = "Difficulty: $difficulty",
-                    fontWeight = FontWeight.Normal,
-                    fontSize = FontSize.REGULAR,
-                    color = TextPrimary1,
-                )
-
-                Text(
-                    text = "Time: " + formatTime(state.elapsedTime),
-                    fontWeight = FontWeight.Normal,
-                    fontSize = FontSize.REGULAR,
-                    color = TextPrimary,
-                )
-
-                Text(
-                    text = "Mistakes: ${state.mistakes}/3",
-                    fontWeight = FontWeight.Normal,
-                    fontSize = FontSize.REGULAR,
-                    color = if (state.mistakes >= 3) Color.Red else Color.Unspecified
-                )
-
-            }
-
-
-            var shouldLoadResult by remember { mutableStateOf(false) }
-            var shouldNavigate by remember { mutableStateOf(false) }
-
-
-            if (showExitDialog) {
-                AlertDialog(
-                    onDismissRequest = { showExitDialog = false },
-                    title = { Text("Exit Game") },
-                    text = { Text("Are you sure you want to exit? Your progress will be saved to resume later.") },
-                    confirmButton = {
-                        TextButton(onClick = {
-                            showExitDialog = false
-                            onBack()
-                        }) {
-                            Text("Yes")
-                        }
-                    },
-                    dismissButton = {
-                        TextButton(onClick = { showExitDialog = false }) {
-                            Text("No")
-                        }
-                    }
-                )
-            }
-
-            if (showRestartDialog.value) {
-                AlertDialog(
-                    onDismissRequest = { showRestartDialog.value = false },
-                    title = { Text("Restart Game") },
-                    text = { Text("Are you sure you want to restart the puzzle?") },
-                    confirmButton = {
-                        TextButton(onClick = {
-                            showRestartDialog.value = false
-                            onAction(SudokuAction.RestartGame)
-                        }) {
-                            Text("Yes")
-                        }
-                    },
-                    dismissButton = {
-                        TextButton(onClick = { showRestartDialog.value = false }) {
-                            Text("No")
-                        }
-                    }
-                )
-            }
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            SudokuBoard(state = state, onAction = onAction)
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            NumberPad(
-                onNumberClick = { number ->
-                    onAction(SudokuAction.EnterNumber(number))
-                }
-            )
 
             Column(
-                modifier = Modifier.align(Alignment.End).padding(end = 24.dp),
-                horizontalAlignment = Alignment.End,
-                verticalArrangement = Arrangement.Center,
+                modifier = modifier
+                    .fillMaxSize()
+                    .background(Color.White)
+                    .padding(horizontal = 16.dp)
+                    .padding(bottom = 16.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Difficulty: $difficulty",
+                        fontWeight = FontWeight.Normal,
+                        fontSize = FontSize.REGULAR,
+                        color = TextPrimary1,
+                    )
+
+                    Text(
+                        text = "Time: " + formatTime(state.elapsedTime),
+                        fontWeight = FontWeight.Normal,
+                        fontSize = FontSize.REGULAR,
+                        color = TextPrimary,
+                    )
+
+                    Text(
+                        text = "Mistakes: ${state.mistakes}/3",
+                        fontWeight = FontWeight.Normal,
+                        fontSize = FontSize.REGULAR,
+                        color = if (state.mistakes >= 3) Color.Red else Color.Unspecified
+                    )
+
+                }
+
+
+                var shouldLoadResult by remember { mutableStateOf(false) }
+                var shouldNavigate by remember { mutableStateOf(false) }
+
+
+                if (showExitDialog) {
+                    AlertDialog(
+                        onDismissRequest = { showExitDialog = false },
+                        title = { Text("Exit Game") },
+                        text = { Text("Are you sure you want to exit? Your progress will be saved to resume later.") },
+                        confirmButton = {
+                            TextButton(onClick = {
+                                showExitDialog = false
+                                onBack()
+                            }) {
+                                Text("Yes")
+                            }
+                        },
+                        dismissButton = {
+                            TextButton(onClick = { showExitDialog = false }) {
+                                Text("No")
+                            }
+                        }
+                    )
+                }
+
+                if (showRestartDialog.value) {
+                    AlertDialog(
+                        onDismissRequest = { showRestartDialog.value = false },
+                        title = { Text("Restart Game") },
+                        text = { Text("Are you sure you want to restart the puzzle?") },
+                        confirmButton = {
+                            TextButton(onClick = {
+                                showRestartDialog.value = false
+                                onAction(SudokuAction.RestartGame)
+                            }) {
+                                Text("Yes")
+                            }
+                        },
+                        dismissButton = {
+                            TextButton(onClick = { showRestartDialog.value = false }) {
+                                Text("No")
+                            }
+                        }
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                SudokuBoard(state = state, onAction = onAction)
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                NumberPad(
+                    onNumberClick = { number ->
+                        onAction(SudokuAction.EnterNumber(number))
+                    }
+                )
+            }
+            Column(
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(horizontal = 24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 HintButton(
                     hintsLeft = 3 - state.hintsUsed,
                     onHint = { onAction(SudokuAction.UseHint) }, // use regular hint
                     onWatchAd = onHint // callback to show rewarded ad dialog/screen
                 )
-                Text(text = "Hint", textAlign = TextAlign.Center)
+                Text(
+                    text = "Hint",
+                    textAlign = TextAlign.Center
+                )
             }
-
-
-
-//            Row(
-//                modifier = Modifier.fillMaxWidth(),
-//                horizontalArrangement = Arrangement.Center,
-//                verticalAlignment = Alignment.CenterVertically
-//            ) {
-//                OutlinedButton(
-//                    onClick = { onAction(SudokuAction.UseHint) },
-//                    enabled = state.hintsUsed < 3,
-//                    modifier = Modifier
-//                        .padding(8.dp)
-//                ) {
-//                    Icon(Icons.Default.Build, contentDescription = "Hint")
-//                    Spacer(modifier = Modifier.width(6.dp))
-//                    Text("Hint (${3 - state.hintsUsed} left)")
-//                }
-//
-//                TextButton(onClick = onHint) { Text("💡 Hint") }
-//            }
-
-
         }
     }
-
-
 }
 
 @Composable
@@ -290,15 +276,22 @@ fun HintButton(
                     .size(20.dp)
                     .align(Alignment.TopEnd)
                     .offset(x = 4.dp, y = (-4).dp)
-                    .background(Color(0xFF4CAF50), shape = CircleShape), // green badge circle
+                    .background(
+                        shape = CircleShape,
+                        color = Color.Transparent
+                    ), // green badge circle
                 contentAlignment = Alignment.Center
             ) {
-                Icon(
-                    painter = painterResource(R.drawable.hint_without_ad),
-                    contentDescription = "Watch Ad",
-                    tint = Color.White,
-                    modifier = Modifier.size(14.dp)
+                Image(
+                    modifier = Modifier.size(24.dp),
+                    painter = painterResource(R.drawable.ad_sudoku1),
+                    contentDescription = null
                 )
+//                Icon(
+//                    painter = painterResource(R.drawable.ad_sudoku1),
+//                    contentDescription = "Watch Ad",
+//                    modifier = Modifier.size(14.dp)
+//                )
             }
         }
     }

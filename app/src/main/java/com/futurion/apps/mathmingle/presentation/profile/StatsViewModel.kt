@@ -66,7 +66,7 @@ class StatsViewModel @Inject constructor(
         }
     }
 
-    public fun loadProfile(userId: String) {
+     fun loadProfile(userId: String) {
         viewModelScope.launch {
             _profile.value = statsRepo.getProfile(userId)
             Log.d("User Profile", _profile.value.toString())

@@ -31,7 +31,10 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -46,14 +49,8 @@ import androidx.compose.ui.unit.sp
 fun LevelBasedScreen(
     maxUnlockedLevel: Int,
     onLevelClick: (Int) -> Unit,
-    rewardLevels: Map<Int, String> = mapOf(
-        5 to "🎁",
-        10 to "⭐",
-        14 to "🔥",
-        20 to "💎",
-        28 to "💎",
-        35 to "💎",
-    ),
+    chunkSize: Int = 100,
+    rewardLevels: Map<Int, String>
 ) {
     val totalLevels = Int.MAX_VALUE // infinite levels (technically limited by Int)
     val levelList = remember { (1..1000).toList() } // Load chunks as needed
@@ -66,6 +63,8 @@ fun LevelBasedScreen(
             .systemBarsPadding()
             .navigationBarsPadding()
     ) {
+
+        var visibleLevels by remember { mutableStateOf((1..chunkSize).toList()) }
 
         Text(
             text = "LEVELS",
@@ -80,8 +79,8 @@ fun LevelBasedScreen(
             modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(8.dp)
         ) {
-            items(levelList.size) { index ->
-                val levelNumber = levelList[index]
+            items(visibleLevels.size) { index ->
+                val levelNumber = visibleLevels[index]
                 val unlocked = levelNumber <= maxUnlockedLevel
                 val hasReward = rewardLevels.containsKey(levelNumber)
 
@@ -89,6 +88,12 @@ fun LevelBasedScreen(
                     hasReward -> if (!unlocked) Color(0xFF4444AA) else Color.DarkGray// Special color for reward levels
                     unlocked -> Color.DarkGray
                     else -> Color.Gray.copy(alpha = 0.2f)
+                }
+
+                if (index >= visibleLevels.size - 5 && visibleLevels.last() < 1000) {
+                    val nextChunkStart = visibleLevels.last() + 1
+                    val nextChunkEnd = (visibleLevels.last() + chunkSize).coerceAtMost(1000)
+                    visibleLevels = visibleLevels + (nextChunkStart..nextChunkEnd).toList()
                 }
 
                 Column(

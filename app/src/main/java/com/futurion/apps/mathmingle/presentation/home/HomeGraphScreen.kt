@@ -150,8 +150,13 @@ fun HomeGraphScreen(
                         actions = {
                             //    StatChip(icon = "💰", label = "Coins", value = coins)
 
-                            AnimatedCoinsChip(viewModel.profile.collectAsStateWithLifecycle().value?.coins ?: 0)
                             AnimatedVisibility(visible = selectedDestination == BottomBarDestination.Games) {
+                                AnimatedCoinsChip(viewModel.profile.collectAsStateWithLifecycle().value?.coins ?: 0)
+                            }
+
+
+                            AnimatedVisibility(visible = selectedDestination == BottomBarDestination.Games) {
+
                                 IconButton(
                                     onClick = {
                                         navController.navigate(Screen.Profile)

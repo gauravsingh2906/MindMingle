@@ -268,7 +268,7 @@ class StatsRepositoryImpl @Inject constructor(
             R.drawable.avatar_2,
             R.drawable.avatar_5,
             R.drawable.avatar_6,
-            R.drawable.avatar_7
+            R.drawable.avatar_7,
         )
         val defaultUnlockedAvatars = defaultAvatarId.random()
         val defaultAvatar = R.drawable.avatar_1
@@ -277,8 +277,8 @@ class StatsRepositoryImpl @Inject constructor(
         val us = OverallProfileEntity(
             userId = newId,
             username = username,
-            avatarUri = defaultUnlockedAvatars,
-            unlockedAvatars = listOf(defaultAvatar)+defaultUnlockedAvatars,
+            avatarUri = defaultAvatar,
+            unlockedAvatars = listOf(defaultAvatar),
         )
         overallProfileDao.insertProfile(us)
         // create default total stats row

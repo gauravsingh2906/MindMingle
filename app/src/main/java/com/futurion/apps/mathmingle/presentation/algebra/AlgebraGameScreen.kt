@@ -16,6 +16,7 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -735,7 +736,8 @@ private fun MissingOperatorCard(
         )
         FlowRowButtons(
             options = q.options.map { it.toString() },
-            onClick = { onSubmit(it.first()) })
+            onClick = { onSubmit(it.first()) }
+        )
     }
 }
 
@@ -880,7 +882,7 @@ private fun FlowRowButtons(options: List<String>, onClick: (String) -> Unit) {
 
     Row(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically
     ) {
         options.take(maxPerRow).forEach { text ->
@@ -889,6 +891,7 @@ private fun FlowRowButtons(options: List<String>, onClick: (String) -> Unit) {
             ) {
                 Text(text, fontSize = 18.sp)
             }
+            Spacer(modifier = Modifier.width(10.dp))
         }
     }
 }

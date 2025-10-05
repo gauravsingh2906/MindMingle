@@ -189,7 +189,11 @@ fun SetUpNavGraph(
 
                 },
                 maxUnlockedLevel = maxUnlocked,
+                rewardLevels = viewModel.generateRewardLevels()
             )
+
+
+
         }
 
         composable<Screen.SudokuScreen> {
@@ -393,6 +397,9 @@ fun SetUpNavGraph(
                     mathMemoryViewModel.onAction(MathMemoryAction.SelectTheme(selectedTheme))
                     navController.popBackStack()
                 },
+                onBackClick = {
+                    navController.navigateUp()
+                }
             )
         }
 
@@ -423,6 +430,8 @@ fun SetUpNavGraph(
                 navController.previousBackStackEntry?.savedStateHandle?.get<String>("currentDifficulty")
                     ?: "Easy"
 
+            Log.d("CurrentDifficulty",currentDifficulty)
+
             Log.d(" Nav Result Data", resultDatas.toString())
 
             val profileData =
@@ -447,7 +456,9 @@ fun SetUpNavGraph(
                     highestLevelCompleted = profileData?.finalLevel ?: 1,
                     onHome = {
                         navController.navigate(Screen.HomeGraph) {
-                            popUpTo(Screen.HomeGraph) { inclusive = false }
+                            popUpTo(Screen.HomeGraph) {
+                                inclusive = false
+                            }
                         }
                     },
                     onReplay = { level, difficulty ->
@@ -460,7 +471,8 @@ fun SetUpNavGraph(
                             )
 
                             AllGames.SUDOKU -> {
-                                navController.navigate("sudoku_screen?gameId=${"sudoku"}&difficulty=${difficulty}")
+                                navController.navigate(Screen.SudokuScreen(difficulty))
+                             //   navController.navigate("sudoku_screen?gameId=${"sudoku"}&difficulty=${difficulty}")
                             }
 
                             AllGames.MEMORY -> {
@@ -488,7 +500,7 @@ fun SetUpNavGraph(
                                     "hard" -> "EXPERT"
                                     else -> "MEDIUM"
                                 }
-                                navController.navigate("sudoku_screen?gameId=${"sudoku"}&difficulty=${nextDifficulty}")
+                                navController.navigate(Screen.SudokuScreen(nextDifficulty))
                             }
 
                             AllGames.MEMORY -> {

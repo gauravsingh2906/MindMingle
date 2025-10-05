@@ -26,6 +26,18 @@ class LevelSelectionViewModel @Inject constructor(
             1
         ) // default 1
 
+    fun generateRewardLevels(): Map<Int, String> {
+        val icons = listOf("⭐", "💎", "🔥", "🎁", "🌟", "🍀", "💡", "🎯") // unique reward icons
+        val rewardLevels = mutableMapOf<Int, String>()
+        var currentLevel = 1
 
+        while (currentLevel <= 1000) {
+            val icon = icons.random() // pick a random icon for each reward
+            rewardLevels[currentLevel] = icon
+            currentLevel += (4..10).random() // minimum gap 4, randomize a bit for variety
+        }
+
+        return rewardLevels.toSortedMap()
+    }
 
 }

@@ -31,6 +31,7 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.futurion.apps.mathmingle.presentation.utils.FontSize
@@ -76,12 +77,11 @@ fun AnimatedEditableUsername(
             Text(
                 text = username,
                 fontFamily = RobotoCondensedFont(),
-                fontSize = FontSize.LARGE,
+                fontSize = 22.sp,
                 fontWeight = FontWeight.Bold,
                 style = MaterialTheme.typography.headlineMedium.copy(
                     color = Color.Black,
                     fontWeight = FontWeight.Bold,
-                    letterSpacing = 1.sp,
                 ),
                 color = Color.Black
             )

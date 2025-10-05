@@ -9,7 +9,9 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -226,8 +228,10 @@ fun ComingSoonCard(onClick: () -> Unit = {}) {
         ) {
             // big lock icon
             Icon(
-                painter = painterResource(id = R.drawable.unlock),
-                contentDescription = "Locked",
+                imageVector = Icons.Outlined.Lock,
+                contentDescription = null,
+//                painter = painterResource(id = R.drawable.unlock),
+//                contentDescription = "Locked",
                 tint = Color.White,
                 modifier = Modifier.size(56.dp)
             )
