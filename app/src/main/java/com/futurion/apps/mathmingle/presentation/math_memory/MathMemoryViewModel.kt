@@ -16,13 +16,18 @@ import com.futurion.apps.mathmingle.domain.repository.StatsRepository
 import com.futurion.apps.mathmingle.domain.state.MathMemoryGameUIState
 import com.futurion.apps.mathmingle.presentation.games.SampleGames.Default
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.util.Random
 import javax.inject.Inject
 import kotlin.math.max
+import kotlin.math.min
 
 @HiltViewModel
 class MathMemoryViewModel @Inject constructor(
@@ -38,6 +43,7 @@ class MathMemoryViewModel @Inject constructor(
     private val _currentStreak = MutableStateFlow(0)
     val currentStreak: StateFlow<Int> = _currentStreak
 
+    private var memorizationTimerJob: Job? = null // <--- Add this
 
     private val _bestStreak = MutableStateFlow(0)
     val bestStreak: StateFlow<Int> = _bestStreak
@@ -131,16 +137,17 @@ class MathMemoryViewModel @Inject constructor(
     fun loadOrInitMathMemoryLevel() {
         viewModelScope.launch {
             val userId = statsRepo.initUserIfNeeded()
-            Log.d("MathMemoryVM", "Loading user progress for $userId")
+            Log.d("MathMemoryScreen", "Loading user progress for $userId")
             val profile = statsRepo.getProfile(userId)
+            Log.d("MathMemoryScreen", "Profile: $profile")
 
             _totalXp.value = profile?.currentLevelXP ?: 0
             _totalCoins.value = profile?.coins ?: 0
             // Get the theme name from profile selectedThemeName or fallback to default
-
+            loadUserStats()
 
             val savedLevel = profile?.mathMemoryCurrentLevel?.takeIf { it > 0 } ?: 1
-            Log.d("MathMemoryVM", "Loading user progress for $userId, start level: $savedLevel")
+            Log.d("MathMemoryScreen", "Loading user progress for $userId, start level: $savedLevel")
             levelManager.setLevel(savedLevel)
             setNewLevel(levelManager.currentLevel())
 
@@ -346,6 +353,7 @@ class MathMemoryViewModel @Inject constructor(
 //    }
 
 
+
     fun onAction(action: MathMemoryAction) {
         when (action) {
             is MathMemoryAction.RevealCards -> {
@@ -427,6 +435,13 @@ class MathMemoryViewModel @Inject constructor(
                     log("Moved to next level: ${newLevel}")
                     setNewLevel(newLevel)
 
+                    _uiState.value = _uiState.value.copy(
+                        game = _uiState.value.game.copy(
+                            isShowCards = true,
+                            showResult = false,   // hide previous result
+                            userInput = ""        // clear previous input
+                        )
+                    )
                     // If we just entered a new 5-level block (i.e., a boundary at 6, 11, 16, ...)
                     // then update theme & (optionally) show unlock animation.
 //                    val enteringNewBlock = ((newLevel.number - 1) % 5 == 0) && newLevel.number != 1
@@ -488,6 +503,21 @@ class MathMemoryViewModel @Inject constructor(
             }
         }
     }
+
+
+    fun loadUserStats() {
+        viewModelScope.launch {
+            val userId = statsRepo.initUserIfNeeded()
+            val gameStats = statsRepo.getPerGameStats(userId,"math_memory")
+
+            gameStats?.let {
+                _currentStreak.value = it.currentStreak
+                _bestStreak.value = it.bestStreak
+            }
+            Log.d("MathMemoryVM", "Loaded streaks: current=${_currentStreak.value}, best=${_bestStreak.value}")
+        }
+    }
+
 
 
     fun onLevelResultAndSaveStats(
@@ -558,6 +588,8 @@ class MathMemoryViewModel @Inject constructor(
         val profile = statsRepo.getProfile(userId)
         _totalXp.value = profile?.currentLevelXP ?: _totalXp.value
         _totalCoins.value = profile?.coins ?: _totalCoins.value
+
+
         log("Game result updated for user $userId at level $levelNum")
     }
 
@@ -567,11 +599,13 @@ class MathMemoryViewModel @Inject constructor(
             onAction(MathMemoryAction.RevealCards)
         }
     }
+    private var isTimerRunning = false
 
     private val _remainingTime = MutableStateFlow(0)
     val remainingTime: StateFlow<Int> = _remainingTime
 
     fun startMemorizationTimer1(delayMs: Long) {
+
         viewModelScope.launch {
             val totalSeconds = (delayMs / 1000).toInt()
             _remainingTime.value = totalSeconds
@@ -586,12 +620,67 @@ class MathMemoryViewModel @Inject constructor(
     }
 
     fun getMemorizationTime(levelNumber: Int, numCards: Int): Long {
+        Log.d("MathMemoryScreen","Viewmodel levelNumber:+$levelNumber,numCards:+$numCards")
+
         val baseTime = 2000L          // 2 seconds minimum
         val perCardTime = 500L        // additional time per card
         val difficultyFactor = 1 + levelNumber / 10f // higher levels slightly slower
-        return ((baseTime + numCards * perCardTime) * difficultyFactor).toLong()
+        val totalTime = ((baseTime + numCards * perCardTime) * difficultyFactor).toLong()
+        Log.d("MathMemoryScreen","Viewmodel totalTime:+$totalTime")
+        return totalTime
     }
 
+    fun getMemorizationTime1(levelNumber: Int, numCards: Int): Long {
+        // Use a capped level for the factor to prevent excessive time in high levels
+        // Capping the "difficulty level" at 30 or 40 is a good idea.
+        val cappedLevel = min(levelNumber, 40) // Capped at Level 40 for max difficulty
+
+        val baseTime = 3000L          // Increased to 3s (from 2s) for fairer start
+        val perCardTime = 400L        // Slightly reduced per-card time (from 500ms)
+
+        // Capped factor: Max factor will be (1 + 40/10) = 5.0
+        val difficultyFactor = 1 + cappedLevel / 10f
+
+        // You could also cap the entire factor directly, e.g., max(1.0, min(5.0, ...))
+
+        val totalTime = ((baseTime + numCards * perCardTime) * difficultyFactor).toLong()
+
+        // Absolute max time cap (e.g., 20 seconds) to ensure brisk gameplay
+        return min(totalTime, 20000L) // Cap at 20 seconds total
+    }
+
+    fun startMemorizationTimer2(delayMs: Long) {
+        // 1. Cancel any existing timer job before starting a new one
+        memorizationTimerJob?.cancel()
+
+        memorizationTimerJob = viewModelScope.launch {
+            val totalSeconds = (delayMs / 1000).toInt()
+
+            // Safety check for very short times, although your level logic prevents this
+            if (totalSeconds <= 0) {
+                onAction(MathMemoryAction.RevealCards)
+                return@launch
+            }
+
+            Log.d("MathMemoryScreen", "Starting timer for $totalSeconds seconds.")
+            _remainingTime.value = totalSeconds
+
+            // 2. Use a loop that checks for cancellation (optional, but good practice)
+            for (i in totalSeconds downTo 1) {
+                // If the coroutine is cancelled, stop the loop immediately
+                if (!isActive) return@launch
+
+                _remainingTime.value = i
+                delay(1000)
+            }
+
+            // The time is 0 when the loop finishes
+            _remainingTime.value = 0
+
+            // Only reveal cards if the coroutine was not cancelled (i.e., we finished)
+            onAction(MathMemoryAction.RevealCards)
+        }
+    }
 
 
     fun useHint() {

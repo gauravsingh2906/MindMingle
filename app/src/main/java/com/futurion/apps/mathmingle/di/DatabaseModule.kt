@@ -9,18 +9,23 @@ import com.futurion.apps.mathmingle.data.local.dao.PerGameStatsDao
 import com.futurion.apps.mathmingle.data.local.dao.SudokuResultDao
 import com.futurion.apps.mathmingle.data.repository.GameResultRepositoryImpl
 import com.futurion.apps.mathmingle.data.repository.LevelRepositoryImpl
+import com.futurion.apps.mathmingle.data.repository.NetworkConnectivityObserverImpl
 import com.futurion.apps.mathmingle.data.repository.StatsRepositoryImpl
 import com.futurion.apps.mathmingle.domain.LevelManager
 import com.futurion.apps.mathmingle.domain.generateMemoryLevel
 
 import com.futurion.apps.mathmingle.domain.repository.GameResultRepository
 import com.futurion.apps.mathmingle.domain.repository.LevelRepository
+import com.futurion.apps.mathmingle.domain.repository.NetworkConnectivityObserver
 import com.futurion.apps.mathmingle.domain.repository.StatsRepository
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import javax.inject.Singleton
 
 @Module
@@ -88,5 +93,20 @@ object DatabaseModule {
 //    fun provideThemeUnlockDao(database: AppDatabase): ThemeUnlockDao {
 //        return database.themeUnlockDao()
 //    }
+
+    @Provides
+    @Singleton
+    fun provideApplicationScope(): CoroutineScope {
+        return CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    }
+
+    @Provides
+    @Singleton
+    fun provideNetworkConnectivityObserver(
+        @ApplicationContext context: Context,
+        scope: CoroutineScope
+    ) : NetworkConnectivityObserver {
+        return NetworkConnectivityObserverImpl(context, scope)
+    }
 
 }

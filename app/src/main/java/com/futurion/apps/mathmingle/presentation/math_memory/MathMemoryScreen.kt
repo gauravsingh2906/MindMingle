@@ -2,6 +2,9 @@ package com.futurion.apps.mathmingle.presentation.math_memory
 
 import android.annotation.SuppressLint
 import android.app.Activity
+import android.content.Context
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
 import android.util.Log
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
@@ -30,6 +33,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentHeight
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -45,6 +49,7 @@ import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -71,10 +76,13 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.futurion.apps.mathmingle.GoogleRewardedAdManager
 import com.futurion.apps.mathmingle.R
+import com.futurion.apps.mathmingle.data.local.entity.PerGameStatsEntity
 import com.futurion.apps.mathmingle.domain.model.AnswerOption
 import com.futurion.apps.mathmingle.domain.model.GameTheme
 import com.futurion.apps.mathmingle.domain.model.MemoryCard
 import com.futurion.apps.mathmingle.domain.model.Operations
+import com.futurion.apps.mathmingle.presentation.algebra.GameWinAnimation
+import com.futurion.apps.mathmingle.presentation.algebra.rememberSoundPool
 import com.futurion.apps.mathmingle.presentation.game_result.StatCard
 import com.futurion.apps.mathmingle.presentation.games.SampleGames.Default
 import com.futurion.apps.mathmingle.presentation.profile.StatsViewModel
@@ -93,7 +101,7 @@ fun MathMemoryScreen(
     navigateToGames: () -> Unit
 ) {
     val profile by statsViewModel.profile.collectAsState()
-
+    var showAnimation by remember { mutableStateOf(false) }
     val totalXp by viewModel.totalXp.collectAsState()
     val totalCoins by viewModel.totalCoins.collectAsState()
 
@@ -113,13 +121,55 @@ fun MathMemoryScreen(
     }
 
 
-//    LaunchedEffect(uiState.game.level, uiState.game.isShowCards) {
-//        if (uiState.game.isShowCards) {
-//            val baseDelay = 2400L
-//            val perCardDelay = 600L
-//            viewModel.startMemorizationTimer1(baseDelay + uiState.game.level.cards.size * perCardDelay)
+
+    val perGameStats by statsViewModel.perGameStats.collectAsStateWithLifecycle()
+    val light = perGameStats.find { it.gameName == "math_memory" } ?: PerGameStatsEntity(gameName = "math_memory", userId = "a", currentStreak = 0, resultMessage = "m", resultTitle = "l")
+
+
+
+
+
+    var lastShowCardsState by remember { mutableStateOf(false) }
+
+//    LaunchedEffect(uiState.game.isShowCards) {
+//        val nowShowing = uiState.game.isShowCards
+//        if (nowShowing && !lastShowCardsState) {
+//            delay(100L) // wait one frame for recomposition
+//            val totalTime = viewModel.getMemorizationTime(
+//                levelNumber = uiState.game.level.number,
+//                numCards = uiState.game.level.cards.size
+//            )
+//            Log.d("MathMemoryScreen", "Starting timer: $totalTime ms")
+//            viewModel.startMemorizationTimer1(totalTime)
 //        }
+//        lastShowCardsState = nowShowing
 //    }
+
+//    LaunchedEffect(uiState.game.isShowCards, uiState.game.level.number) {
+//        val nowShowing = uiState.game.isShowCards
+//        val currentLevel = uiState.game.level.number
+//
+//        // Don’t start timer until profile loading is finished and level is valid
+//        if (nowShowing && !lastShowCardsState && currentLevel > 1) {
+//            val totalTime = viewModel.getMemorizationTime(
+//                levelNumber = currentLevel,
+//                numCards = uiState.game.level.cards.size
+//            )
+//            Log.d("MathMemoryScreen", "Starting timer: $totalTime ms")
+//            viewModel.startMemorizationTimer1(totalTime)
+//        }
+//
+//        lastShowCardsState = nowShowing
+//    }
+
+    val context = LocalContext.current
+    val soundPool = rememberSoundPool()
+
+    val winSoundId = remember { soundPool.load(context, R.raw.game_completed, 1) }
+    val loseSoundId = remember { soundPool.load(context, R.raw.game_over, 1) }
+
+
+
     LaunchedEffect(uiState.game.level, uiState.game.isShowCards) {
         if (uiState.game.isShowCards) {
             val totalTime = viewModel.getMemorizationTime(
@@ -127,7 +177,7 @@ fun MathMemoryScreen(
                 numCards = uiState.game.level.cards.size
             )
             Log.d("MathMemoryScreen", "totalTime: $totalTime")
-            viewModel.startMemorizationTimer1(totalTime)
+            viewModel.startMemorizationTimer2(totalTime)
         }
     }
 
@@ -155,7 +205,7 @@ fun MathMemoryScreen(
         else -> 0
     }
 
-    val context = LocalContext.current
+
     val activity = context as? Activity
     val googleAdManager = GoogleRewardedAdManager(context, Constants.AD_Unit)
 
@@ -170,7 +220,21 @@ fun MathMemoryScreen(
                 currentStreak = viewModel.currentStreak.value,
                 bestStreak = viewModel.bestStreak.value,
             )
+
             lastSavedLevel = gameLevel
+        }
+    }
+
+    LaunchedEffect(uiState.game.showResult, uiState.game.isCorrect) {
+        if (uiState.game.showResult) {
+            if (uiState.game.isCorrect) {
+                showAnimation=true
+                soundPool.play(winSoundId, 1f, 1f, 1, 0, 1f)
+                delay(2500)
+                showAnimation = false
+            } else {
+                soundPool.play(loseSoundId, 1f, 1f, 1, 0, 1f)
+            }
         }
     }
 
@@ -178,7 +242,7 @@ fun MathMemoryScreen(
         AlertDialog(
             onDismissRequest = { showExitDialog = false },
             title = { Text("Exit Game") },
-            text = { Text("Are you sure you want to exit? Your progress will be saved to resume later.") },
+            text = { Text("Are you sure you want to exit? Your progress will be lost") },
             confirmButton = {
                 TextButton(onClick = {
                     showExitDialog = false
@@ -251,32 +315,28 @@ fun MathMemoryScreen(
                         onSelect = { viewModel.onAction(MathMemoryAction.SelectTheme(it)) }
                     )
 
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp),
-                        contentAlignment = Alignment.Center // Top right
-                    ) {
-                        IconButton(
-                            onClick = { navigateToThemeUnlock(userId) },
-                            modifier = Modifier
-                                .size(48.dp)
-                                .background(Color.White.copy(alpha = 0.9f), CircleShape)
-                                .border(1.dp, Color.Gray, CircleShape)
-                        ) {
-                            Icon(
-                                painter = painterResource(R.drawable.theme), // Replace with your theme icon
-                                contentDescription = "Theme Selector",
-                                tint = Color(0xFF6A8BFF)
-                            )
-                        }
-                    }
+//                    Box(
+//                        modifier = Modifier
+//                            .fillMaxWidth()
+//                            .padding(16.dp),
+//                        contentAlignment = Alignment.Center // Top right
+//                    ) {
+//                        IconButton(
+//                            onClick = { navigateToThemeUnlock(userId) },
+//                            modifier = Modifier
+//                                .size(48.dp)
+//                                .background(Color.White.copy(alpha = 0.9f), CircleShape)
+//                                .border(1.dp, Color.Gray, CircleShape)
+//                        ) {
+//                            Icon(
+//                                painter = painterResource(R.drawable.theme), // Replace with your theme icon
+//                                contentDescription = "Theme Selector",
+//                                tint = Color(0xFF6A8BFF)
+//                            )
+//                        }
+//                    }
 
-
-
-
-
-                    Spacer(Modifier.height(14.dp))
+                    Spacer(Modifier.height(12.dp))
 
                     Text(
                         text = "Level ${uiState.game.level.number}",
@@ -355,8 +415,8 @@ fun MathMemoryScreen(
                                 totalCoins = viewModel.totalCoins.collectAsState().value,
                                 xpEarned = viewModel.getXpForLevel(uiState.game.level.number),
                                 coinsEarned = coinsEarned,
-                                streak = viewModel.currentStreak.collectAsState().value,
-                                bestStreak = viewModel.bestStreak.collectAsState().value,
+                                streak = light.currentStreak ?:0,
+                                bestStreak = light.bestStreak ?:0,
                                 onNext = { viewModel.onAction(MathMemoryAction.NextLevel) },
                                 onRetry = {
                                     viewModel.onAction(MathMemoryAction.ResetGame)
@@ -450,20 +510,27 @@ fun MathMemoryScreen(
                                 )
                                 Spacer(Modifier.height(8.dp))
 
-                                Button(
-                                    onClick = {
-                                     //   viewModel.useSkip()
-                                        viewModel.onAction(MathMemoryAction.SkipLevel)
-                                    },
-                                    enabled = remainingSkips > 0
-                                ) {
-                                    Text("Skip")
-                                }
+//                                Button(
+//                                    onClick = {
+//                                        viewModel.onAction(MathMemoryAction.SkipLevel)
+//                                    },
+//                                    enabled = remainingSkips > 0
+//                                ) {
+//                                    Text(text = "Skip")
+//                                }
 
 
                                 if (!secondChanceUsed) {
-                                    Button(
+                                    OutlinedButton(
                                         onClick = {
+                                            if (!isInternetAvailable(context)) {
+                                                Toast.makeText(
+                                                    context,
+                                                    "No internet connection. Please connect to the internet.",
+                                                    Toast.LENGTH_SHORT
+                                                ).show()
+                                                return@OutlinedButton
+                                            }
                                             if (activity != null) {
                                                 googleAdManager.showRewardedAd(
                                                     activity,
@@ -486,20 +553,38 @@ fun MathMemoryScreen(
                                             }
                                         },
                                         modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(vertical = 12.dp),
-                                        colors = ButtonDefaults.buttonColors(
-                                            containerColor = Color(0xFFFFD600)
+                                            .wrapContentWidth()
+                                            .height(48.dp)
+                                            .padding(top = 10.dp),
+                                        shape = RoundedCornerShape(12.dp),
+                                        border = BorderStroke(2.dp, Color(0xFFFFD600)),
+                                        colors = ButtonDefaults.outlinedButtonColors(
+                                            containerColor = Color.White.copy(alpha = 0.1f),
+                                            contentColor = Color(0xFFFFD600)
                                         )
                                     ) {
-                                        Text("👁 Watch Ad to See Moves Again")
+                                        Icon(
+                                            painter = painterResource(id = R.drawable.hint_without_ad), // same icon as your hint
+                                            contentDescription = "Watch Ad",
+                                            tint = Color(0xFFFFD600),
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(6.dp))
+                                        Text(
+                                            text = "Watch Ad to See Moves",
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 13.sp,
+                                            color = Color(0xFFFFD600)
+                                        )
                                     }
                                 }
+
 
                             }
                         }
 
                         else -> {
+                            Log.d("Light",light.toString())
                             // RESULT - hide header (Box is full size) and show ResultFullScreen
                             ResultFullScreen(
                                 isCorrect = uiState.game.isCorrect,
@@ -508,12 +593,22 @@ fun MathMemoryScreen(
                                 totalCoins = totalCoins,
                                 xpEarned = viewModel.getXpForLevel(uiState.game.level.number),
                                 coinsEarned = coinsEarned,
-                                streak = viewModel.currentStreak.collectAsState().value,
-                                bestStreak = viewModel.bestStreak.collectAsState().value,
+                                streak = light?.currentStreak ?:0,
+                                bestStreak = light?.bestStreak ?:0,
                                 onNext = { viewModel.onAction(MathMemoryAction.NextLevel) },
                                 onRetry = { viewModel.onAction(MathMemoryAction.ResetGame) },
                                 navigateToGames = navigateToGames
                             )
+                        }
+                    }
+                    if (showAnimation) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(Color.Black.copy(alpha = 0.8f)), // transparent background
+                            contentAlignment = Alignment.Center
+                        ) {
+                            GameWinAnimation() // 🎉 full screen animation
                         }
                     }
                 }
@@ -522,6 +617,8 @@ fun MathMemoryScreen(
         }
     }
 }
+
+
 
 fun getMemorizationTime(levelNumber: Int, numCards: Int): Long {
     val baseTime = 2000L                 // 2 seconds minimum
@@ -560,6 +657,15 @@ private fun WelcomeTutorial(onStart: () -> Unit) {
         }
     }
 }
+
+fun isInternetAvailable(context: Context): Boolean {
+    val connectivityManager =
+        context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+    val network = connectivityManager.activeNetwork ?: return false
+    val activeNetwork = connectivityManager.getNetworkCapabilities(network) ?: return false
+    return activeNetwork.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+}
+
 
 @Composable
 private fun TutorialMemorize(
@@ -821,17 +927,16 @@ fun ResultFullScreen(
                             value = "+${coinsEarned}",
                             subtitle = "This Level"
                         )
+
+                        StatCard(
+                            modifier = Modifier.weight(1f),
+                            icon = painterResource(R.drawable.fire_icon),
+                            iconColor = Color(0xFFFF5722),
+                            title = "STREAK POWER",
+                            value = "${streak} / ${bestStreak}",
+                            subtitle = "Current / Best Streak"
+                        )
                     }
-
-                    StatCard(
-                        modifier = Modifier.fillMaxWidth(),
-                        icon = painterResource(R.drawable.fire_icon),
-                        iconColor = Color(0xFFFF5722),
-                        title = "STREAK POWER",
-                        value = "${streak} / ${bestStreak}",
-                        subtitle = "Current / Best Streak"
-                    )
-
                 }
             }
 
@@ -853,7 +958,7 @@ fun ResultFullScreen(
 //            )
 
 
-            Spacer(modifier = Modifier.height(40.dp))
+            Spacer(modifier = Modifier.weight(1f))
 
 
             Button(
@@ -871,6 +976,7 @@ fun ResultFullScreen(
                     fontWeight = FontWeight.Bold
                 )
             }
+            Spacer(modifier = Modifier.height(40.dp))
         }
     }
 }

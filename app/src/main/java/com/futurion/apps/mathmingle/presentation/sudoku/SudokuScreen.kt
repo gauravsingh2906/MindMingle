@@ -1,5 +1,6 @@
 package com.futurion.apps.mathmingle.presentation.sudoku
 
+import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.Image
@@ -41,6 +42,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -49,6 +51,7 @@ import androidx.compose.ui.unit.sp
 import com.futurion.apps.mathmingle.R
 import com.futurion.apps.mathmingle.domain.model.Difficulty
 import com.futurion.apps.mathmingle.domain.state.SudokuState
+import com.futurion.apps.mathmingle.presentation.math_memory.isInternetAvailable
 import com.futurion.apps.mathmingle.presentation.utils.BebasNeueFont
 import com.futurion.apps.mathmingle.presentation.utils.FontSize
 import com.futurion.apps.mathmingle.presentation.utils.IconPrimary
@@ -74,6 +77,8 @@ fun SudokuScreen(
     BackHandler {
         showExitDialog = true
     }
+
+    val context = LocalContext.current
 
     Scaffold(
         containerColor = Surface,
@@ -159,7 +164,7 @@ fun SudokuScreen(
                     AlertDialog(
                         onDismissRequest = { showExitDialog = false },
                         title = { Text("Exit Game") },
-                        text = { Text("Are you sure you want to exit? Your progress will be saved to resume later.") },
+                        text = { Text("Are you sure you want to exit? Your progress will be lost") },
                         confirmButton = {
                             TextButton(onClick = {
                                 showExitDialog = false
@@ -236,10 +241,17 @@ fun HintButton(
     onWatchAd: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val context = LocalContext.current
     Box(modifier = modifier.size(48.dp)) { // container size for icon + badge
         IconButton(
-            onClick = if (hintsLeft > 0) onHint else onWatchAd,
-            modifier = Modifier.fillMaxSize().border(width = 1.dp, color = Color.Yellow, shape = CircleShape)
+            onClick = if (hintsLeft > 0) {
+                onHint
+            } else {
+                onWatchAd
+            },
+            modifier = Modifier
+                .fillMaxSize()
+                .border(width = 1.dp, color = Color.Yellow, shape = CircleShape)
         ) {
             Icon(
                 painter = painterResource(R.drawable.hint_without_ad),

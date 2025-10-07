@@ -71,6 +71,8 @@ class AlgebraViewModel @Inject constructor(
     private val _timeRemaining = MutableStateFlow(0)
     val timeRemaining: StateFlow<Int> = _timeRemaining
 
+    val totalSeconds = LevelConfig(_level.value).timeLimitSeconds()
+
 //    private val _timeLeft = mutableStateOf(config.timeLimitSeconds())
 //    val timeLeft: State<Int> = _timeLeft
 

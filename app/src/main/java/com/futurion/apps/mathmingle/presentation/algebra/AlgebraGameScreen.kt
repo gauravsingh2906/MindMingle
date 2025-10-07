@@ -8,6 +8,7 @@ import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.ExperimentalAnimationApi
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -75,7 +76,7 @@ fun AlgebraGameScreen(
         AlertDialog(
             onDismissRequest = { showExitDialog = false },
             title = { Text("Exit Game") },
-            text = { Text("Are you sure you want to exit? Your progress will be saved to resume later.") },
+            text = { Text("Are you sure you want to exit? Your progress will be lost.") },
             confirmButton = {
                 TextButton(onClick = {
                     showExitDialog = false
@@ -99,6 +100,7 @@ fun AlgebraGameScreen(
     val score by viewModel.score.collectAsState()
     val level by viewModel.level.collectAsState()
     val timeRemaining by viewModel.timeRemaining.collectAsState()
+    val totalSeconds = viewModel.totalSeconds
     val isGameOver by viewModel.gameOver.collectAsState()  //
     val levelCompleted by viewModel.levelCompleted.collectAsState()
     val gameResult by viewModel.gameResult.collectAsState() //
@@ -346,15 +348,60 @@ fun AlgebraGameScreen(
                     timeLeft = timeRemaining,
                     onBack = {
                         showExitDialog = true
-                    }
+                    },
+                    totalSeconds = totalSeconds
                 )
 
-                LinearProgressIndicator(
-                    progress = (score / total.toFloat()).coerceIn(0f, 1f),
+                val animatedProgress by animateFloatAsState(
+                    targetValue = (score / total.toFloat()).coerceIn(0f, 1f),
+                    animationSpec = tween(durationMillis = 600, easing = FastOutSlowInEasing)
+                )
+
+                Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(16.dp)
+                        .height(14.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(Color(0xFFE0E0E0))
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxHeight()
+                            .fillMaxWidth(animatedProgress)
+                            .background(
+                                Brush.horizontalGradient(
+                                    listOf(
+                                        Color(0xFF00E676),
+                                        Color(0xFF00C853),
+                                        Color(0xFF1B5E20)
+                                    )
+                                )
+                            )
+                    )
+                }
+
+                // 💬 Motivational Score Text
+                val remaining = (total - score).coerceAtLeast(0)
+                Text(
+                    text = when {
+                        score >= total -> "🎉 Great job! You’ve completed this level!"
+                        remaining <= total * 0.1 -> "🔥 Almost there! Just $remaining more to go!"
+                        remaining <= total * 0.3 -> "💪 Keep it up! Only $remaining points left!"
+                        else -> "🏁 Reach $total points to unlock the next level!"
+                    },
+                    fontSize = 13.sp,
+                    color = Color(0xFF616161),
+                    fontWeight = FontWeight.Medium,
+                    modifier = Modifier.padding(bottom = 12.dp)
                 )
+
+
+//                LinearProgressIndicator(
+//                    progress = (score / total.toFloat()).coerceIn(0f, 1f),
+//                    modifier = Modifier
+//                        .fillMaxWidth()
+//                        .padding(16.dp)
+//                )
 
 
                 // ---------- Question Card ----------
@@ -461,64 +508,34 @@ fun AlgebraGameScreen(
                 }
 
                 // Bottom actions
-                BottomBar(
-                    onHint = {
-                        if (activity != null) {
-                            adManager.showRewardedAd(
-                                activity,
-                                onUserEarnedReward = {
-                                    showHint = true
-                                    viewModel.useHint()
-                                },
-                                onClosed = {
-                                    // Optional: show a message if ad wasn’t ready
-                                    if (!showHint) {
-                                        Toast.makeText(
-                                            context,
-                                            "Ad not ready, please try again.",
-                                            Toast.LENGTH_SHORT
-                                        ).show()
-                                    }
-                                }
-                            )
-                        }
-                    },
-                    onRestart = { viewModel.startGame() },
-                    onPause = { /* hook if you add pause modal */ }
-                )
+//                BottomBar(
+//                    onHint = {
+//                        if (activity != null) {
+//                            adManager.showRewardedAd(
+//                                activity,
+//                                onUserEarnedReward = {
+//                                    showHint = true
+//                                    viewModel.useHint()
+//                                },
+//                                onClosed = {
+//                                    // Optional: show a message if ad wasn’t ready
+//                                    if (!showHint) {
+//                                        Toast.makeText(
+//                                            context,
+//                                            "Ad not ready, please try again.",
+//                                            Toast.LENGTH_SHORT
+//                                        ).show()
+//                                    }
+//                                }
+//                            )
+//                        }
+//                    },
+//                    onRestart = { viewModel.startGame() },
+//                    onPause = { /* hook if you add pause modal */ }
+//                )
 
             }
 
-
-//                if (levelCompleted && showAnimation) {
-//                    GameWinAnimation(
-//                        onAnimationFinished = {
-//                            showAnimation = false
-//                            showCompletedDialog = true
-//                        }
-//                    )
-//                }
-
-//                if (levelCompleted && showCompletedDialog && !showAnimation) {
-//                    LevelCompletedDialog(
-//                        level = level,
-//                        earnedScore = score,
-//                        onNextLevel = {
-//                            viewModel.levelCompleted() // unlock in Room
-//                            viewModel.setLevel(level + 1)
-//                            viewModel.startGame()
-//                            // naviagteToGameScreen(viewModel.level.value)
-//                        },
-//                        onReplay = {
-//                            viewModel.setLevel(level)
-//                            viewModel.startGame()
-//                        },
-//                        onHome = {
-//                            viewModel.levelCompleted()
-//                            onBack()
-//                        }
-//                    )
-//                }
 
             if (showHint) {
                 Text(
@@ -586,7 +603,7 @@ fun GameWinAnimation(
 @OptIn(ExperimentalAnimationApi::class)
 @Composable
 private fun GameHud(
-    level: Int, score: Int, timeLeft: Int, onBack: () -> Unit,
+    level: Int, score: Int, timeLeft: Int,totalSeconds:Int, onBack: () -> Unit,
 ) {
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
 
@@ -636,18 +653,46 @@ private fun GameHud(
 
             // Timer bar + number
             Column(horizontalAlignment = Alignment.End) {
-                Text("Time", fontSize = 12.sp, color = Color(0xFF666A7A))
+//                Text("Time", fontSize = 12.sp, color = Color(0xFF666A7A))
+//                LinearProgressIndicator(
+//                    progress = {
+//                        (timeLeft.coerceAtLeast(0) / maxOf(
+//                            1f, timeLeft.coerceAtLeast(1).toFloat()
+//                        ))
+//                    },
+//                    // we show a full bar shrinking using width animation below
+//                    modifier = Modifier
+//                        .width(160.dp)
+//                        .height(8.dp)
+//                        .clip(RoundedCornerShape(16.dp))
+//                )
+//                Text("$timeLeft s", fontSize = 12.sp, color = Color(0xFF424656))
+
+                Text(
+                    text = "Time Remaining",
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 14.sp,
+                    color = Color(0xFF37474F),
+                    modifier = Modifier.padding(bottom = 4.dp)
+                )
+
+                val timeFraction = (timeLeft / totalSeconds.toFloat()).coerceIn(0f, 1f)
+
+                // Dynamic color based on time left
+                val timerColor = when {
+                    timeFraction > 0.6f -> Color(0xFF4CAF50) // Green
+                    timeFraction > 0.3f -> Color(0xFFFFC107) // Yellow
+                    else -> Color(0xFFF44336) // Red
+                }
+
                 LinearProgressIndicator(
-                    progress = {
-                        (timeLeft.coerceAtLeast(0) / maxOf(
-                            1f, timeLeft.coerceAtLeast(1).toFloat()
-                        ))
-                    },
-                    // we show a full bar shrinking using width animation below
+                    progress = timeFraction,
                     modifier = Modifier
-                        .width(160.dp)
-                        .height(8.dp)
-                        .clip(RoundedCornerShape(16.dp))
+                        .fillMaxWidth()
+                        .height(10.dp)
+                        .clip(RoundedCornerShape(10.dp)),
+                    color = timerColor,
+                    trackColor = Color(0xFFE0E0E0)
                 )
                 Text("$timeLeft s", fontSize = 12.sp, color = Color(0xFF424656))
             }
@@ -942,71 +987,3 @@ private fun LoadingCard() {
     }
 }
 
-/* ================  GAME OVER DIALOG  ================= */
-
-
-
-@Composable
-fun MissingNumberUI(
-    q: Question.MissingNumber,
-    textAnswer: String,
-    onTextChange: (String) -> Unit,
-    onSubmit: (Int) -> Unit
-) {
-    val leftText = if (q.missingPosition == 1) "_" else q.left.toString()
-    val rightText = if (q.missingPosition == 2) "_" else q.right.toString()
-
-    Text(
-        "$leftText ${q.operator} $rightText = ${
-            when (q.operator) {
-                '+' -> q.left + q.right
-                '-' -> q.left - q.right
-                '×' -> q.left * q.right
-                '÷' -> if (q.right != 0) q.left / q.right else 0
-                else -> q.left + q.right
-            }
-        }"
-    )
-
-    OutlinedTextField(
-        value = textAnswer, onValueChange = onTextChange, label = { Text("Answer") })
-    Spacer(Modifier.height(8.dp))
-    Button(onClick = {
-        val ans = textAnswer.toIntOrNull()
-        if (ans != null) onSubmit(ans)
-    }) { Text("Submit") }
-}
-
-@Composable
-fun MissingOperatorUI(q: Question.MissingOperator, onSubmit: (Char) -> Unit) {
-    Text("${q.a} ? ${q.b} = ${q.result}")
-    Row(Modifier.padding(top = 8.dp)) {
-        q.options.forEach { op ->
-            Button(onClick = { onSubmit(op) }, modifier = Modifier.padding(4.dp)) {
-                Text(op.toString())
-            }
-        }
-    }
-}
-
-@Composable
-fun TrueFalseUI(q: Question.TrueFalse, onSubmit: (Boolean) -> Unit) {
-    Text(q.expression)
-    Row(Modifier.padding(top = 8.dp)) {
-        Button(onClick = { onSubmit(true) }) { Text("✔") }
-        Spacer(Modifier.width(8.dp))
-        Button(onClick = { onSubmit(false) }) { Text("✖") }
-    }
-}
-
-@Composable
-fun ReverseUI(q: Question.Reverse, onSubmit: (Char) -> Unit) {
-    Text("${q.a} _ ${q.b} = ${q.result}")
-    Row(Modifier.padding(top = 8.dp)) {
-        q.options.forEach { op ->
-            Button(onClick = { onSubmit(op) }, modifier = Modifier.padding(4.dp)) {
-                Text(op.toString())
-            }
-        }
-    }
-}

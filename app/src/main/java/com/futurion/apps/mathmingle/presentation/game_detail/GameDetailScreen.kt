@@ -49,6 +49,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.futurion.apps.mathmingle.R
 import com.futurion.apps.mathmingle.domain.model.Difficulty
 import com.futurion.apps.mathmingle.presentation.game_detail.component.FlavorChip
 import com.futurion.apps.mathmingle.presentation.utils.Alpha
@@ -73,9 +74,11 @@ fun GameDetailScreen(
     gameSubtitle: String, // e.g., "Boost your logic and memory skills!"
     xpReward: Int,
     coinsReward: Int,
+    userId: String,
     knowledgeBadges: List<String>, // e.g., ["Logic", "Focus", "Math"]
     howToPlaySteps: List<String>, // List of short instruction steps
     howToEarnCons:List<String>,
+    navigateToThemeUnlock:(String)->Unit,
     howToPlayImages: List<Int>, // Resource IDs for image carousel
     onStart: (String) -> Unit,
     navigateBack: () -> Unit,
@@ -107,6 +110,24 @@ fun GameDetailScreen(
                                 imageVector = Icons.Default.Refresh,
                                 contentDescription = "Back Arrow icon",
                                 tint = IconPrimary
+                            )
+                        }
+                    }
+                    AnimatedVisibility(
+                        visible = gameTitle=="Math Memory"
+                    ) {
+                        IconButton(
+                            onClick = {
+                                navigateToThemeUnlock(userId)
+                            },
+                            modifier = Modifier
+                                .size(48.dp)
+                                .background(Color.White.copy(alpha = 0.9f), CircleShape)
+                        ) {
+                            Icon(
+                                painter = painterResource(R.drawable.theme), // Replace with your theme icon
+                                contentDescription = "Theme Selector",
+                                tint = Color(0xFF6A8BFF)
                             )
                         }
                     }

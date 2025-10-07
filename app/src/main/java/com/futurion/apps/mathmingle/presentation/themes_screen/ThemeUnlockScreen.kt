@@ -33,6 +33,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.futurion.apps.mathmingle.GoogleRewardedAdManager
 import com.futurion.apps.mathmingle.domain.model.GameTheme
+import com.futurion.apps.mathmingle.presentation.math_memory.isInternetAvailable
 import com.futurion.apps.mathmingle.presentation.profile.StatsViewModel
 import com.futurion.apps.mathmingle.presentation.utils.Constants
 
@@ -201,6 +202,14 @@ fun ThemeUnlockScreen(
             confirmButton = {
                 Button(onClick = {
                     showAdDialog = false
+                    if (!isInternetAvailable(context)) {
+                        Toast.makeText(
+                            context,
+                            "No internet connection. Please connect to the internet.",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                        return@Button
+                    }
                     if (activity != null) {
                         statsViewModel.canWatchAd(themeViewModel.userId ?: "") { canWatch, _ ->
                             if (canWatch) {
@@ -234,7 +243,30 @@ fun ThemeUnlockScreen(
             confirmButton = {
                 Button(onClick = {
                     showCoinDialog = null
-                    showAdDialog = true
+                    if (!isInternetAvailable(context)) {
+                        Toast.makeText(
+                            context,
+                            "No internet connection. Please connect to the internet.",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                        return@Button
+                    }
+                    if (activity != null) {
+                        statsViewModel.canWatchAd(themeViewModel.userId ?: "") { canWatch, _ ->
+                            if (canWatch) {
+                                googleAdManager.showRewardedAd(
+                                    activity,
+                                    onUserEarnedReward = {
+                                        statsViewModel.rewardUserForAd(themeViewModel.userId ?: "")
+                                        Toast.makeText(context, "+10 Coins earned!", Toast.LENGTH_SHORT).show()
+                                    },
+                                    onClosed = { }
+                                )
+                            } else {
+                                Toast.makeText(context, "Daily ad limit reached!", Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                    }
                 }) { Text("Earn Coins") }
             },
             dismissButton = { TextButton(onClick = { showCoinDialog = null }) { Text("Cancel") } }

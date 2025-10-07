@@ -3,6 +3,7 @@ package com.futurion.apps.mathmingle.presentation.navigation
 import android.app.Activity
 import android.util.Log
 import android.widget.Toast
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -18,6 +19,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -30,12 +32,15 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
 import com.futurion.apps.mathmingle.GoogleRewardedAdManager
 import com.futurion.apps.mathmingle.data.local.entity.OverallProfileEntity
+import com.futurion.apps.mathmingle.data.local.entity.PerGameStatsEntity
 import com.futurion.apps.mathmingle.domain.model.AllGames
 import com.futurion.apps.mathmingle.domain.model.Difficulty
 import com.futurion.apps.mathmingle.domain.model.UniversalResult
 import com.futurion.apps.mathmingle.domain.state.SudokuState
 import com.futurion.apps.mathmingle.presentation.algebra.AlgebraGameScreen
 import com.futurion.apps.mathmingle.presentation.algebra.AlgebraViewModel
+import com.futurion.apps.mathmingle.presentation.algebra.GameWinAnimation
+import com.futurion.apps.mathmingle.presentation.algebra.rememberSoundPool
 
 
 import com.futurion.apps.mathmingle.presentation.game_detail.GameDetailScreen
@@ -47,6 +52,7 @@ import com.futurion.apps.mathmingle.presentation.level_selection.LevelSelectionV
 import com.futurion.apps.mathmingle.presentation.math_memory.MathMemoryAction
 import com.futurion.apps.mathmingle.presentation.math_memory.MathMemoryScreen
 import com.futurion.apps.mathmingle.presentation.math_memory.MathMemoryViewModel
+import com.futurion.apps.mathmingle.presentation.math_memory.isInternetAvailable
 import com.futurion.apps.mathmingle.presentation.profile.StatsViewModel
 import com.futurion.apps.mathmingle.presentation.sudoku.SudokuGameEvent
 import com.futurion.apps.mathmingle.presentation.sudoku.SudokuScreen
@@ -56,6 +62,7 @@ import com.futurion.apps.mathmingle.presentation.themes_screen.ThemeUnlockScreen
 import com.futurion.apps.mathmingle.presentation.themes_screen.ThemeViewModel
 import com.futurion.apps.mathmingle.presentation.utils.Constants
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -90,7 +97,10 @@ fun SetUpNavGraph(
                 },
                 coins = profile?.coins ?: 0,
                 profile = profile ?: OverallProfileEntity(userId = "e"),
-                viewModel = statsViewModel
+                viewModel = statsViewModel,
+                navigateToThemeUnlock = {
+                    navController.navigate(Screen.ThemeSelectionScreen(it))
+                }
             )
         }
 
@@ -107,12 +117,10 @@ fun SetUpNavGraph(
 
             val coins = statsViewModel.profile.value?.coins
 
+            val userId = statsViewModel.userId.collectAsStateWithLifecycle().value
+
 
             val game = sudokuViewModel.getGameById(id)
-
-
-
-
 
             GameDetailScreen(
                 gameTitle = game?.name ?: "",
@@ -121,36 +129,36 @@ fun SetUpNavGraph(
                 coinsReward = coins ?: 0,
                 knowledgeBadges = listOf("amazing", "best", "corin"),
                 howToPlaySteps = game?.steps ?: listOf(),
-                howToPlayImages = listOf(
-                    R.drawable.fourthone,
-                ),
+                howToPlayImages = listOf(R.drawable.fourthone),
                 howToEarnCons = game?.coins ?: listOf(),
                 onStart = { difficulty ->
                     when (game?.id) {
                         "sudoku" -> {
                             navController.navigate(Screen.SudokuScreen(difficulty))
                         }
+
                         "math_memory" -> {
                             val highestLevel = statsViewModel.profile.value?.mathMemoryHighestLevel ?: 1
                             Log.d("Nav Level", highestLevel.toString())
                             navController.navigate(Screen.MathMemoryScreen(highestLevel))
                         }
+
                         else -> {
                             navController.navigate(Screen.LevelSelection("algebra"))
                         }
                     }
-
                 },
                 navigateBack = {
                     navController.popBackStack()
                 },
                 navigateToSudokuResult = {
                     navController.navigate(Screen.SudokuHistoryScreen)
+                },
+                userId = userId ?:"",
+                navigateToThemeUnlock = {
+                    navController.navigate(Screen.ThemeSelectionScreen(it))
                 }
-
             )
-
-
         }
 
         composable<Screen.LevelSelection> {
@@ -161,7 +169,7 @@ fun SetUpNavGraph(
 
             val gameViewModel: AlgebraViewModel = hiltViewModel()
 
-            val maxUnlocked by viewModel.maxUnlockedLevel.collectAsState()
+            val maxUnlocked by viewModel.maxUnlockedLevel.collectAsStateWithLifecycle()
 
             // val gameId = viewModel.gameId.value
 
@@ -171,21 +179,26 @@ fun SetUpNavGraph(
             //  val scaffoldState = rememberScaffoldState()
             val coroutineScope = rememberCoroutineScope()
 
+
             LevelBasedScreen(
                 onLevelClick = { level ->
-                    if (id == "algebra") {
-                        Log.e("Nav Level Inside", "Algebra nav level inside$level")
-                        if (level <= maxUnlocked) {
-                            gameViewModel.setLevel(level)
-                            navController.navigate(Screen.AlgebraGameScreen(level))
-                        }
-                    } else if (id == "math_memory") {
-                        Log.e("Nav Level Inside", "Math nav level inside$level")
-                        if (level <= maxUnlocked) {
-                            gameViewModel.setLevel(level)
-                            //  navController.navigate(Routes.MathMemoryMixScreen(level))
-                        }
+                    if (level <= maxUnlocked) {
+                        gameViewModel.setLevel(level)
+                        navController.navigate(Screen.AlgebraGameScreen(level))
                     }
+//                    if (id == "algebra") {
+//                        Log.e("Nav Level Inside", "Algebra nav level inside$level")
+//                        if (level <= maxUnlocked) {
+//                            gameViewModel.setLevel(level)
+//                            navController.navigate(Screen.AlgebraGameScreen(level))
+//                        }
+//                    } else if (id == "math_memory") {
+//                        Log.e("Nav Level Inside", "Math nav level inside$level")
+//                        if (level <= maxUnlocked) {
+//                            gameViewModel.setLevel(level)
+//                            //  navController.navigate(Routes.MathMemoryMixScreen(level))
+//                        }
+//                    }
 
                 },
                 maxUnlockedLevel = maxUnlocked,
@@ -197,96 +210,145 @@ fun SetUpNavGraph(
         }
 
         composable<Screen.SudokuScreen> {
-
             val stringDifficulty = it.toRoute<Screen.SudokuScreen>().difficulty
-
             val difficulty = Difficulty.valueOf(stringDifficulty)
-
             val viewModel: SudokuViewModel = hiltViewModel()
             val statsViewModel: StatsViewModel = hiltViewModel()
-
             val state = viewModel.state
-
             val context = LocalContext.current
+
+            val perGameStats by statsViewModel.perGameStats.collectAsStateWithLifecycle()
+
+            val perGameStatsEntity = perGameStats.find { it.gameName == "sudoku" } ?: PerGameStatsEntity(userId = "a", gameName = "sudoku", resultTitle = "d", resultMessage = "d")
+
+            var showAnimation by remember { mutableStateOf(false) }
+            val soundPool = rememberSoundPool()
+            val winSoundId = remember { soundPool.load(context, R.raw.game_completed, 1) }
+            val loseSoundId = remember { soundPool.load(context, R.raw.game_over, 1) }
+
+
 
             LaunchedEffect(Unit) {
                 viewModel.event.collect { event ->
                     when (event) {
                         is SudokuGameEvent.PuzzleSolved -> {
+                            val entity = perGameStats.find { it.gameName == "sudoku" } ?: PerGameStatsEntity(userId = "a", gameName = "sudoku", resultTitle = "d", resultMessage = "d")
+                            Log.d("EntityStats", "Entiy +$entity")
+                            showAnimation = true
+                            soundPool.play(winSoundId, 1f, 1f, 1, 0, 1f)
+                            delay(100)
+                            delay(2500)
+                            showAnimation = false
                             handleSudokuWin(
                                 viewModel = viewModel,
                                 newViewModel = statsViewModel,
                                 navController = navController,
                                 difficulty = stringDifficulty,
-                                coins = calculateCoins(viewModel)
+                                entity = entity,
+                                coins = calculateCoins(viewModel,entity)
                             )
                         }
 
                         is SudokuGameEvent.GameOver -> {
+                            val entity = perGameStats.find { it.gameName == "sudoku" } ?: PerGameStatsEntity(userId = "a", gameName = "sudoku", resultTitle = "d", resultMessage = "d")
+                            Log.d("EntityStats", "Entiy +$entity")
+                            delay(100)
+                            soundPool.play(loseSoundId, 1f, 1f, 1, 0, 1f)
+                            delay(1500)
                             handleSudokuLoss(
                                 viewModel = viewModel,
                                 newViewModel = statsViewModel,
                                 navController = navController,
                                 difficulty = stringDifficulty,
-                                coins = calculateCoins(viewModel)
+                                entity = entity,
+                              //  totalCoins=statsViewModel.profile.value?.coins,
+                                coins = calculateCoins(viewModel,entity)
                             )
                         }
                     }
                 }
             }
-            val activity = context as? Activity
-//            val adMobAdUnitId =
-//                "ca-app-pub-3940256099942544/5224354917"
 
+            val activity = context as? Activity
             var showHint by remember { mutableStateOf(false) }
             val googleAdManager = remember { GoogleRewardedAdManager(context, Constants.AD_Unit) }
-            // Facebook ad manager
-            //  val facebookAdManager = remember { FacebookRewardedAdManager(context) }
 
-            // Your AdMob rewarded ad unit
-            val facebookPlacementId = "xxxxxxxx"               // Your FB placement ID
+            // Wrap everything in a Box so we can overlay
+            Box(modifier = Modifier.fillMaxSize()) {
 
-            SudokuScreen(
-                state = state.value,
-                onAction = viewModel::onAction,
-                onHint = {
-                    if (activity != null) {
-                        googleAdManager.showRewardedAd(
-                            activity,
-                            onUserEarnedReward = {
-                                showHint = true
-                                viewModel.rewardUserForAd()
-                                Toast.makeText(context, "Use your hint now", Toast.LENGTH_LONG)
-                                    .show()
-                            },
-                            onClosed = {
-                                if (!showHint) {
-                                    Toast.makeText(
-                                        context,
-                                        "Ad not ready, please try again.",
-                                        Toast.LENGTH_SHORT
-                                    ).show()
+                val entity = perGameStats.find { it.gameName == "sudoku" }
+                Log.d("EntityStats", "Entiy +$entity")
+
+                // Your Sudoku UI
+                SudokuScreen(
+                    state = state.value,
+                    onAction = viewModel::onAction,
+                    onHint = {
+                        if (!isInternetAvailable(context)) {
+                            Toast.makeText(
+                                context,
+                                "No internet connection. Please connect to the internet.",
+                                Toast.LENGTH_SHORT
+                            ).show()
+                            return@SudokuScreen
+                        }
+                        if (activity != null) {
+                            googleAdManager.showRewardedAd(
+                                activity,
+                                onUserEarnedReward = {
+                                    showHint = true
+                                    viewModel.rewardUserForAd()
+                                    Toast.makeText(context, "Use your hint now", Toast.LENGTH_LONG).show()
+                                },
+                                onClosed = {
+                                    if (!showHint) {
+                                        Toast.makeText(
+                                            context,
+                                            "Ad not ready, please try again.",
+                                            Toast.LENGTH_SHORT
+                                        ).show()
+                                    }
                                 }
-                            }
+                            )
+                        }
+                    },
+                    difficulty = difficulty,
+                    onBack = {
+                        navController.navigateUp()
+                        handleSudokuLoss(
+                            viewModel = viewModel,
+                            newViewModel = statsViewModel,
+                            navController = navController,
+                            difficulty = stringDifficulty,
+                            coins = calculateCoins(viewModel,perGameStatsEntity),
+                            entity = entity ?: PerGameStatsEntity(userId = "a", gameName = "sudoku", resultTitle = "d", resultMessage = "d"),
                         )
                     }
+                )
 
-                    //  viewModel.onAction(SudokuAction.UseHint)
-
-                },
-                difficulty = difficulty,
-                onBack = {
-                    navController.navigateUp()
-                    handleSudokuLoss(
-                        viewModel = viewModel,
-                        newViewModel = statsViewModel,
-                        navController = navController,
-                        difficulty = stringDifficulty,
-                        coins = calculateCoins(viewModel)
-                    )
+                if (showAnimation) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(Color.Black.copy(alpha = 0.8f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        GameWinAnimation()
+                    }
                 }
-            )
+
+                // Animation overlay on top
+//                AnimatedVisibility(
+//                    visible = showAnimation,
+//                    enter = fadeIn() + scaleIn(),
+//                    exit = fadeOut() + scaleOut()
+//                ) {
+
+
+           //     }
+            }
         }
+
 
         composable<Screen.SudokuHistoryScreen> {
             SavedSudokuResultsScreen(
@@ -542,9 +604,14 @@ private fun handleSudokuWin(
     newViewModel: StatsViewModel,
     navController: NavController,
     difficulty: String,
-    coins: Int
+    coins: Int,
+    entity: PerGameStatsEntity
 ) {
     val state = viewModel.state.value
+
+
+
+
 
     // Update all your existing stats
 //    userStatsViewModel.recordGameResult(
@@ -581,6 +648,7 @@ private fun handleSudokuWin(
                 eachGameXp = state.xpEarned,
                 eachGameCoin = 1,
             )
+            newViewModel.loadProfile(userId = newViewModel.userId.value ?: "name")
         }
 
         withContext(Dispatchers.Main) {
@@ -590,10 +658,11 @@ private fun handleSudokuWin(
                 state = state,
                 difficulty = difficulty,
                 coins = coins,
-                currentStreak = viewModel.currentStreak.value,
-                bestStreak = viewModel.bestStreak.value,
+                currentStreak = entity.currentStreak,
+                bestStreak = entity.bestStreak,
                 profileData = newViewModel.profile.value,
-                isWin = true
+                isWin = true,
+                newViewModel = newViewModel,
             )
         }
 
@@ -609,7 +678,8 @@ private fun handleSudokuLoss(
     newViewModel: StatsViewModel,
     navController: NavController,
     difficulty: String,
-    coins: Int
+    coins: Int, // this is a per game coin
+    entity: PerGameStatsEntity
 ) {
     val state = viewModel.state.value
 
@@ -617,6 +687,10 @@ private fun handleSudokuLoss(
 
 
     val time = (state.elapsedTime) / 60
+
+    val bestStreak = entity.bestStreak
+    Log.d("BestStreak","Win: $entity")
+    Log.d("BestStreak","Loss: $bestStreak")
 
     newViewModel.viewModelScope.launch {
         withContext(Dispatchers.IO) {
@@ -628,27 +702,28 @@ private fun handleSudokuLoss(
                 xp = state.xpEarned,
                 hints = state.hintsUsed,
                 timeSec = state.elapsedTime.toLong(),
-                coins = 0,
+                coins = coins,
                 currentStreak = viewModel.currentStreak.value,
-                bestStreak = viewModel.bestStreak.value,
+                bestStreak = bestStreak,
                 resultTitle = "😔 GAME OVER",
                 resultMessage = "You made 3 mistakes. Better luck next time!",
                 isMatchWon = false,
                 eachGameXp = state.xpEarned,
-                eachGameCoin = 1,
+                eachGameCoin = 0,
             )
         }
         withContext(Dispatchers.Main) {
             // ✅ Navigate to CommonResultScreen with Sudoku data
             navigateToSudokuResult(
+                newViewModel,
                 navController = navController,
                 state = state,
                 difficulty = difficulty,
-                currentStreak = viewModel.currentStreak.value,
-                bestStreak = viewModel.bestStreak.value,
+                currentStreak = entity.currentStreak,
+                bestStreak = entity.bestStreak,
                 profileData = newViewModel.profile.value,
                 isWin = false,
-                coins = coins,
+                coins = coins, // navigating with each game coins
             )
         }
     }
@@ -659,6 +734,7 @@ private fun handleSudokuLoss(
 }
 
 private fun navigateToSudokuResult(
+    newViewModel: StatsViewModel,
     navController: NavController,
     state: SudokuState,
     difficulty: String,
@@ -668,6 +744,9 @@ private fun navigateToSudokuResult(
     isWin: Boolean,
     coins: Int
 ) {
+    Log.d("BestStreak",bestStreak.toString())
+
+    val resutl = newViewModel.perGameStats.value.find { it.gameName == "sudoku" }
     // Create UniversalResult for Sudoku
     val universalResult = UniversalResult(
         title = if (isWin) "EXCELLENT" else "GAME OVER",
@@ -683,11 +762,13 @@ private fun navigateToSudokuResult(
         canNextLevel = isWin,
         xpEarned = profileData?.currentLevelXP?.plus(state.xpEarned) ?: 0,
         eachGameXp = state.xpEarned,
-        eachGameCoin = if (currentStreak >= 3) 20 else 0,
-        coinsEarned = coins,
-        currentStreak = if (isWin) currentStreak + 1 else 0,
-        bestStreak = if (isWin) bestStreak + 1 else bestStreak,
+        eachGameCoin = coins,
+        coinsEarned = profileData?.coins?.plus(coins) ?: 0,
+        currentStreak = (resutl?.currentStreak?.plus(1)) ?: 0,
+        bestStreak = resutl?.bestStreak?.plus(1) ?: 0,
     )
+
+    Log.d("SudokuUniversal",universalResult.toString())
 
     // Pass all data through SavedStateHandle
     navController.currentBackStackEntry?.savedStateHandle?.apply {
@@ -699,9 +780,11 @@ private fun navigateToSudokuResult(
     navController.navigate(Screen.CommonResultScreen)
 }
 
-fun calculateCoins(viewModel: SudokuViewModel): Int {
+fun calculateCoins(viewModel: SudokuViewModel,profileEntity: PerGameStatsEntity): Int {
     var totalCoins = 0
-    if (viewModel.currentStreak.value >= 3) {
+    val profile = profileEntity.currentStreak+1
+    Log.d("Solution",profile.toString())
+    if (profile >= 3) {
         totalCoins += 30       // Streak bonus
     }
     if (viewModel.state.value.isGameWon) {
@@ -711,7 +794,9 @@ fun calculateCoins(viewModel: SudokuViewModel): Int {
             Difficulty.HARD -> 30
         }
     }
-    if (viewModel.state.value.elapsedTime < 5) {
+    val totalTime = viewModel.state.value.elapsedTime
+    Log.d("Solution","TotalTime:$totalTime")
+    if (totalTime < 300) {
         totalCoins += 15       // Fast finish bonus
     }
     return totalCoins

@@ -58,6 +58,7 @@ fun generateMemoryLevel(level: Int): MemoryLevel {
         level <= 40 -> random.nextInt(2) + 5 // 5–6
         else -> random.nextInt(2) + 6 // 6–7
     }
+    Log.d("MathMemoryScreen","NumOps: $numOps")
 
     repeat(numOps) {
         var op = when {

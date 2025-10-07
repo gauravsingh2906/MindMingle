@@ -2,6 +2,7 @@ package com.futurion.apps.mathmingle.presentation.profile
 
 import android.app.Activity
 import android.util.Log
+import android.widget.Toast
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -65,6 +66,7 @@ import com.futurion.apps.mathmingle.GoogleRewardedAdManager
 import com.futurion.apps.mathmingle.R
 import com.futurion.apps.mathmingle.data.local.entity.OverallProfileEntity
 import com.futurion.apps.mathmingle.data.local.entity.PerGameStatsEntity
+import com.futurion.apps.mathmingle.presentation.math_memory.isInternetAvailable
 import com.futurion.apps.mathmingle.presentation.profile.component.AnimatedEditableUsername
 import com.futurion.apps.mathmingle.presentation.profile.component.AnimatedPerGameStats
 import com.futurion.apps.mathmingle.presentation.profile.component.LevelProgressCircle
@@ -431,6 +433,14 @@ fun AvatarUnlockDialog(
                                     } else {
                                         TextButton(
                                             onClick = {
+                                                if (!isInternetAvailable(context)) {
+                                                    Toast.makeText(
+                                                        context,
+                                                        "No internet connection. Please connect to the internet.",
+                                                        Toast.LENGTH_SHORT
+                                                    ).show()
+                                                    return@TextButton
+                                                }
                                                 if (activity != null) {
                                                     rewardedAdManager.showRewardedAd(
                                                         activity,

@@ -12,12 +12,14 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.with
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
@@ -34,11 +36,14 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.compose.NavHost
@@ -46,6 +51,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import coil.compose.rememberAsyncImagePainter
+import com.futurion.apps.mathmingle.R
 import com.futurion.apps.mathmingle.data.local.entity.OverallProfileEntity
 import com.futurion.apps.mathmingle.presentation.games.GameStats
 import com.futurion.apps.mathmingle.presentation.games.GamesScreenWithStats
@@ -69,6 +75,7 @@ fun HomeGraphScreen(
     viewModel: StatsViewModel,
     profile: OverallProfileEntity,
     navigateToGameDetail: (String) -> Unit,
+    navigateToThemeUnlock:(String)-> Unit,
     coins: Int
 ) {
 
@@ -151,8 +158,33 @@ fun HomeGraphScreen(
                             //    StatChip(icon = "💰", label = "Coins", value = coins)
 
                             AnimatedVisibility(visible = selectedDestination == BottomBarDestination.Games) {
-                                AnimatedCoinsChip(viewModel.profile.collectAsStateWithLifecycle().value?.coins ?: 0)
+                                AnimatedCoinsChip(
+                                    viewModel.profile.collectAsStateWithLifecycle().value?.coins
+                                        ?: 0
+                                )
                             }
+
+                            AnimatedVisibility(
+                                visible = selectedDestination == BottomBarDestination.Profile
+                            ) {
+                                IconButton(
+                                    onClick ={
+                                        navigateToThemeUnlock(profile.userId)
+                                    },
+                                    modifier = Modifier
+                                        .size(48.dp)
+                                        .background(Color.White.copy(alpha = 0.9f), CircleShape)
+                                ) {
+                                    Icon(
+                                        painter = painterResource(R.drawable.theme), // Replace with your theme icon
+                                        contentDescription = "Theme Selector",
+                                        tint = Color(0xFF6A8BFF)
+                                    )
+                                }
+
+                            }
+
+
 
 
                             AnimatedVisibility(visible = selectedDestination == BottomBarDestination.Games) {
@@ -207,7 +239,7 @@ fun HomeGraphScreen(
                         composable<Screen.Games> {
 
 
-                        //    val viewModel : StatsViewModel = hiltViewModel()
+                            //    val viewModel : StatsViewModel = hiltViewModel()
 
 //                            val sudokuViewModel: SudokuViewModel = hiltViewModel()
 //
@@ -290,7 +322,8 @@ fun HomeGraphScreen(
 
 
                             ProfileScreen(
-                                profile = profile ?: OverallProfileEntity(userId = "1\tc97f320d-4681-4e07-aeca-f305ea33d7e9\tsudoku\t2\t0\t2\t0\t20\t1\t3\t1\t6\t20"),
+                                profile = profile
+                                    ?: OverallProfileEntity(userId = "1\tc97f320d-4681-4e07-aeca-f305ea33d7e9\tsudoku\t2\t0\t2\t0\t20\t1\t3\t1\t6\t20"),
                                 perGameStats = perGameStats,
                                 navigateToProfileScreen = {
                                     navController.navigate(Screen.GameDetailScreen)

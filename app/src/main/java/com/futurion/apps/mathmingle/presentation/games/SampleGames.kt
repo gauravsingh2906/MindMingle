@@ -152,7 +152,7 @@ object SampleGames {
             fontWeight = FontWeight.Bold
         ),
         GameTheme(
-            name = "Nature",
+            name = "City",
             backgroundImage = R.drawable.city_skyline_portrait,
             textColor = Color.White,
             buttonColor = Color(0xFF3DB2FF),
@@ -168,9 +168,9 @@ object SampleGames {
         GameTheme(
             name = "Cyber",
             backgroundImage = R.drawable.fourthone,
-            textColor = Color(0xFF00E5FF),
+            textColor = Color.White,
             buttonColor = Color.Black,
-            buttonTextColor = Color(0xFF00E5FF)
+            buttonTextColor = Color.White
         ),
         GameTheme(
             name = "Night",
