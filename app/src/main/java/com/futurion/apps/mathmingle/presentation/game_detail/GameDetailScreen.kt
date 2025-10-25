@@ -82,7 +82,6 @@ fun GameDetailScreen(
     howToPlayImages: List<Int>, // Resource IDs for image carousel
     onStart: (String) -> Unit,
     navigateBack: () -> Unit,
-    navigateToSudokuResult: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     var selectedDifficulty by remember { mutableStateOf<Difficulty>(Difficulty.EASY) }
@@ -102,17 +101,6 @@ fun GameDetailScreen(
                     )
                 },
                 actions = {
-                    AnimatedVisibility(
-                        visible = gameTitle=="Sudoku"
-                    ) {
-                        IconButton(onClick = navigateToSudokuResult) {
-                            Icon(
-                                imageVector = Icons.Default.Refresh,
-                                contentDescription = "Back Arrow icon",
-                                tint = IconPrimary
-                            )
-                        }
-                    }
                     AnimatedVisibility(
                         visible = gameTitle=="Math Memory"
                     ) {

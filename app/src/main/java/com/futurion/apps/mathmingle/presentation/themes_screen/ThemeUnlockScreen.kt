@@ -3,6 +3,7 @@ package com.futurion.apps.mathmingle.presentation.themes_screen
 import android.annotation.SuppressLint
 import android.app.Activity
 import android.widget.Toast
+import com.futurion.apps.mathmingle.R
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -15,7 +16,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AddCircle
 import androidx.compose.material.icons.filled.ArrowBack
-import com.futurion.apps.mathmingle.R
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material3.*
 import androidx.compose.material3.LinearProgressIndicator
@@ -45,7 +45,7 @@ fun ThemeUnlockScreen(
     onThemeSelected: (GameTheme) -> Unit,
     onBackClick: (() -> Unit)? = null
 ) {
-    val profile by statsViewModel.profile.collectAsStateWithLifecycle()
+    val profile by statsViewModel.profile1.collectAsStateWithLifecycle()
     val coins = profile?.coins ?: 0
     val unlockedThemes by remember { derivedStateOf { themeViewModel.unlockedThemes.value } }
     val selectedThemeState by remember { derivedStateOf { themeViewModel.selectedTheme.value } }
@@ -81,16 +81,16 @@ fun ThemeUnlockScreen(
                         Spacer(Modifier.width(6.dp))
                         Text("$coins", style = MaterialTheme.typography.titleMedium)
                         Spacer(Modifier.width(12.dp))
-                        Button(
-                            onClick = { showAdDialog = true },
-                            shape = RoundedCornerShape(20.dp),
-                            enabled = adsLeft > 0,
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = if (adsLeft > 0) Color(0xFFFF9800) else Color.Gray
-                            )
-                        ) {
-                            Text(if (adsLeft > 0) "Earn Coins" else "Limit Reached")
-                        }
+//                        Button(
+//                            onClick = { showAdDialog = true },
+//                            shape = RoundedCornerShape(20.dp),
+//                            enabled = adsLeft > 0,
+//                            colors = ButtonDefaults.buttonColors(
+//                                containerColor = if (adsLeft > 0) Color(0xFFFF9800) else Color.Gray
+//                            )
+//                        ) {
+//                            Text(if (adsLeft > 0) "Earn Coins" else "Limit Reached")
+//                        }
                     }
                 }
             )

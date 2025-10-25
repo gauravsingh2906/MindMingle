@@ -1,5 +1,6 @@
 package com.futurion.apps.mathmingle.presentation.sudoku
 
+import android.media.SoundPool
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.animateColorAsState
@@ -33,6 +34,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -51,6 +53,7 @@ import androidx.compose.ui.unit.sp
 import com.futurion.apps.mathmingle.R
 import com.futurion.apps.mathmingle.domain.model.Difficulty
 import com.futurion.apps.mathmingle.domain.state.SudokuState
+import com.futurion.apps.mathmingle.presentation.algebra.rememberSoundPool
 import com.futurion.apps.mathmingle.presentation.math_memory.isInternetAvailable
 import com.futurion.apps.mathmingle.presentation.utils.BebasNeueFont
 import com.futurion.apps.mathmingle.presentation.utils.FontSize
@@ -59,6 +62,9 @@ import com.futurion.apps.mathmingle.presentation.utils.Resources
 import com.futurion.apps.mathmingle.presentation.utils.Surface
 import com.futurion.apps.mathmingle.presentation.utils.TextPrimary
 import com.futurion.apps.mathmingle.presentation.utils.TextPrimary1
+
+
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -79,6 +85,13 @@ fun SudokuScreen(
     }
 
     val context = LocalContext.current
+
+    val soundPool = rememberSoundPool() // you already used this helper elsewhere
+
+  //  val cellSelectSoundId = remember { soundPool.load(context, R.raw.mixkit_select_click, 1) }
+    val correctSoundId = remember { soundPool.load(context, R.raw.mixkit_achievement, 1) }
+    val wrongSoundId = remember { soundPool.load(context, R.raw.mixkit_click_error, 1) }
+    val gameClickSoundId = remember { soundPool.load(context, R.raw.mixkit_select_click, 1) } // optional
 
     Scaffold(
         containerColor = Surface,
@@ -119,7 +132,6 @@ fun SudokuScreen(
                 .background(Color.White)
                 .padding(it)
         ) {
-
             Column(
                 modifier = modifier
                     .fillMaxSize()
@@ -133,7 +145,7 @@ fun SudokuScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "Difficulty: $difficulty",
+                        text = "$difficulty",
                         fontWeight = FontWeight.Normal,
                         fontSize = FontSize.REGULAR,
                         color = TextPrimary1,
@@ -204,14 +216,19 @@ fun SudokuScreen(
 
                 Spacer(modifier = Modifier.height(8.dp))
 
-                SudokuBoard(state = state, onAction = onAction)
+                SudokuBoard(state = state, onAction = onAction, soundPool = soundPool)
 
                 Spacer(modifier = Modifier.height(16.dp))
 
                 NumberPad(
+                    state=state,
                     onNumberClick = { number ->
                         onAction(SudokuAction.EnterNumber(number))
-                    }
+                    },
+                    soundPool = soundPool,
+                    gameClickSoundId = gameClickSoundId,
+                    correctSoundId = correctSoundId,
+                    wrongSoundId = wrongSoundId
                 )
             }
             Column(
@@ -222,7 +239,9 @@ fun SudokuScreen(
             ) {
                 HintButton(
                     hintsLeft = 3 - state.hintsUsed,
-                    onHint = { onAction(SudokuAction.UseHint) }, // use regular hint
+                    onHint = {
+                        onAction(SudokuAction.UseHint)
+                    }, // use regular hint
                     onWatchAd = onHint // callback to show rewarded ad dialog/screen
                 )
                 Text(
@@ -241,7 +260,7 @@ fun HintButton(
     onWatchAd: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val context = LocalContext.current
+
     Box(modifier = modifier.size(48.dp)) { // container size for icon + badge
         IconButton(
             onClick = if (hintsLeft > 0) {
@@ -313,8 +332,18 @@ fun HintButton(
 @Composable
 fun SudokuBoard(
     state: SudokuState,
-    onAction: (SudokuAction) -> Unit
+    onAction: (SudokuAction) -> Unit,
+    soundPool: SoundPool,
 ) {
+    val context = LocalContext.current
+    // at top of SudokuScreen
+
+
+
+    DisposableEffect(Unit) {
+        onDispose { soundPool.release() }
+    }
+
 
 
     Column(
@@ -412,8 +441,19 @@ fun SudokuBoard(
 
 @Composable
 fun NumberPad(
-    onNumberClick: (Int) -> Unit
+    state: SudokuState,
+    onNumberClick: (Int) -> Unit,
+    soundPool: SoundPool,
+    gameClickSoundId: Int,
+    correctSoundId: Int,
+    wrongSoundId: Int,
 ) {
+//    val context = LocalContext.current
+//
+//
+//    val gameClick = remember { soundPool.load(context, R.raw.mixkit_select_click, 1) }
+//    val loseSoundId = remember { soundPool.load(context, R.raw.game_over, 1) }
+
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         (1..9).chunked(3).forEach { row ->
             Row(
@@ -422,7 +462,21 @@ fun NumberPad(
             ) {
                 row.forEach { number ->
                     OutlinedButton(
-                        onClick = { onNumberClick(number) },
+                        onClick = {
+                            val selected = state.selectedCell
+                            if (selected != null) {
+                                val (r, c) = selected
+                                val expected = state.solutionBoard[r][c].value
+                                if (expected == number) {
+                                    soundPool.play(correctSoundId, 1f, 1f, 1, 0, 1f)
+                                } else {
+                                    soundPool.play(wrongSoundId, 1f, 1f, 1, 0, 1f)
+                                }
+                            } else {
+                                // no cell selected - optional beep or ignore
+                            }
+                            onNumberClick(number)
+                        },
                         modifier = Modifier.size(50.dp),
                         shape = CircleShape
                     ) {

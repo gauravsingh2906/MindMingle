@@ -6,7 +6,9 @@ import android.net.NetworkCapabilities
 
 object Constants {
 
-    val AD_Unit = "ca-app-pub-8518481585284676/6876736558"
+   // val AD_Unit = "ca-app-pub-8518481585284676/6876736558"
+
+    val AD_Unit = "ca-app-pub-3940256099942544/5224354917"
 
 }
 

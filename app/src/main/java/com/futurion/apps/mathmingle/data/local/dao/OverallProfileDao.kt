@@ -6,6 +6,7 @@ import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Update
 import com.futurion.apps.mathmingle.data.local.entity.OverallProfileEntity
+import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface OverallProfileDao {
@@ -15,6 +16,9 @@ interface OverallProfileDao {
 
     @Query("SELECT * FROM overall_profile WHERE userId = :userId LIMIT 1")
     suspend fun getProfile(userId: String): OverallProfileEntity?
+
+    @Query("SELECT * FROM overall_profile WHERE userId = :userId")
+    fun getProfileFlow(userId: String): Flow<OverallProfileEntity>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertProfile(profile: OverallProfileEntity)

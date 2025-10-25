@@ -327,13 +327,13 @@ fun AvatarUnlockDialog(
     val avatarList = listOf(
         R.drawable.avatar_1 to UnlockCondition.AlwaysUnlocked,
         R.drawable.free_avatar to UnlockCondition.Level(5),
-        R.drawable.avatar_4 to UnlockCondition.Coins(500),
+        R.drawable.avatar_4 to UnlockCondition.Coins(400),
         R.drawable.avatar_11 to UnlockCondition.Level(10),
         R.drawable.avatar_9 to UnlockCondition.Level(15),
         R.drawable.avatar_10 to UnlockCondition.Level(25),
         R.drawable.avatar_5 to UnlockCondition.Coins(1500),
         R.drawable.avatar_anime to UnlockCondition.Level(40),
-        R.drawable.avatar_anime1 to UnlockCondition.Level(50),
+        R.drawable.avatar_anime3 to UnlockCondition.Level(50),
     )
 
     val context = LocalContext.current
@@ -461,7 +461,6 @@ fun AvatarUnlockDialog(
                                             fontSize = 10.sp,
                                             color = Color.Gray
                                         )
-
                                     }
                                 }
 

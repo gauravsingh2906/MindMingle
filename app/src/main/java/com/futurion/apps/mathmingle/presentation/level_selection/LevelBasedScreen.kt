@@ -49,8 +49,7 @@ import androidx.compose.ui.unit.sp
 fun LevelBasedScreen(
     maxUnlockedLevel: Int,
     onLevelClick: (Int) -> Unit,
-    chunkSize: Int = 100,
-    rewardLevels: Map<Int, String>
+    chunkSize: Int = 100
 ) {
     val totalLevels = Int.MAX_VALUE // infinite levels (technically limited by Int)
     val levelList = remember { (1..1000).toList() } // Load chunks as needed
@@ -82,10 +81,9 @@ fun LevelBasedScreen(
             items(visibleLevels.size) { index ->
                 val levelNumber = visibleLevels[index]
                 val unlocked = levelNumber <= maxUnlockedLevel
-                val hasReward = rewardLevels.containsKey(levelNumber)
+
 
                 val backgroundColor = when {
-                    hasReward -> if (!unlocked) Color(0xFF4444AA) else Color.DarkGray// Special color for reward levels
                     unlocked -> Color.DarkGray
                     else -> Color.Gray.copy(alpha = 0.2f)
                 }
@@ -115,14 +113,6 @@ fun LevelBasedScreen(
                     )
 
                     // Show reward indicator even if locked
-                    rewardLevels[levelNumber]?.let { rewardIcon ->
-                        Text(
-                            text = rewardIcon,
-                            fontSize = 14.sp,
-                            color = if (unlocked) Color.Yellow else Color.LightGray,
-                            modifier = Modifier.padding(top = 2.dp)
-                        )
-                    }
                 }
             }
         }

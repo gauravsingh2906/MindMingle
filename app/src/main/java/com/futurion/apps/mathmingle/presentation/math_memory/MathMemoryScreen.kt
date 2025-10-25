@@ -114,6 +114,8 @@ fun MathMemoryScreen(
         mutableStateOf(if (uiState.game.level.number == 1) TutorialPhase.WELCOME else TutorialPhase.RESULT)
     }
 
+
+
     var showExitDialog by remember { mutableStateOf(false) }
 
     BackHandler {
@@ -122,9 +124,13 @@ fun MathMemoryScreen(
 
 
 
+
+
     val perGameStats by statsViewModel.perGameStats.collectAsStateWithLifecycle()
     val light = perGameStats.find { it.gameName == "math_memory" } ?: PerGameStatsEntity(gameName = "math_memory", userId = "a", currentStreak = 0, resultMessage = "m", resultTitle = "l")
 
+    val perGameStatsMap by statsViewModel.perGameStats1.collectAsState()
+    val light1 = perGameStatsMap["math_memory"]
 
 
 
@@ -168,6 +174,12 @@ fun MathMemoryScreen(
     val winSoundId = remember { soundPool.load(context, R.raw.game_completed, 1) }
     val loseSoundId = remember { soundPool.load(context, R.raw.game_over, 1) }
 
+    val timeSoundId = remember { soundPool.load(context, R.raw.mixkit_clock_countdown_bleeps, 1) }
+    val correctSoundId = remember { soundPool.load(context, R.raw.mixkit_correct_answer_tone_2870, 1) }
+    val wrongSoundId = remember { soundPool.load(context, R.raw.mixkit_click_error, 1) }
+
+
+
 
 
     LaunchedEffect(uiState.game.level, uiState.game.isShowCards) {
@@ -176,8 +188,13 @@ fun MathMemoryScreen(
                 levelNumber = uiState.game.level.number,
                 numCards = uiState.game.level.cards.size
             )
+            val anotherTime = viewModel.getMemorizationTime1(
+                levelNumber = uiState.game.level.number,
+                numCards = uiState.game.level.cards.size
+            )
             Log.d("MathMemoryScreen", "totalTime: $totalTime")
-            viewModel.startMemorizationTimer2(totalTime)
+            Log.d("MathMemoryScreen", "AnotherTime: $totalTime")
+            viewModel.startMemorizationTimer2(anotherTime)
         }
     }
 
@@ -205,6 +222,48 @@ fun MathMemoryScreen(
         else -> 0
     }
 
+    fun calculateMathMemoryCoins(viewModel: MathMemoryViewModel): Int {
+        var totalCoins = 0
+        val currentLevel = viewModel.uiState.value.game.level.number
+        val isCorrect = uiState.game.isCorrect
+        val currentStreak = viewModel.currentStreak.value
+        val bestStreak = viewModel.bestStreak.value
+
+        if (!isCorrect) return 0 // No reward for incorrect answers
+
+        // 🎯 Base Level Reward (progression-based)
+        totalCoins += when {
+            currentLevel <= 5 -> (5..8).random()
+            currentLevel <= 15 -> (10..15).random()
+            currentLevel <= 30 -> (15..25).random()
+            else -> (25..40).random()
+        }
+
+        // 🔥 Streak Bonus (increasing excitement)
+        totalCoins += when {
+            currentStreak in 3..4 -> 10
+            currentStreak in 5..7 -> 20
+            currentStreak in 8..12 -> 35
+            currentStreak > 12 -> 50
+            else -> 0
+        }
+
+
+        // 🧩 Accuracy / New Best Streak Bonus
+        if (currentStreak > bestStreak) {
+            totalCoins += 25
+        }
+
+        // 🍀 Random “Brain Burst” Bonus (small chance)
+        if ((1..100).random() <= 5) {
+            totalCoins += (15..40).random() // dopamine jackpot
+        }
+        if ((1..100).random() <= 2) totalCoins *= 2
+
+        return totalCoins
+    }
+
+
 
     val activity = context as? Activity
     val googleAdManager = GoogleRewardedAdManager(context, Constants.AD_Unit)
@@ -216,7 +275,7 @@ fun MathMemoryScreen(
                 isCorrect = isCorrect,
                 hintsUsed = viewModel.hintsUsed.value,
                 timeSpentSeconds = 1,
-                coinsEarned = coinsEarned,
+                coinsEarned = calculateMathMemoryCoins(viewModel),
                 currentStreak = viewModel.currentStreak.value,
                 bestStreak = viewModel.bestStreak.value,
             )
@@ -251,7 +310,7 @@ fun MathMemoryScreen(
                         isCorrect = isCorrect,
                         hintsUsed = viewModel.hintsUsed.value,
                         timeSpentSeconds = 1,
-                        coinsEarned = coinsEarned,
+                        coinsEarned = calculateMathMemoryCoins(viewModel),
                         currentStreak = viewModel.currentStreak.value,
                         bestStreak = viewModel.bestStreak.value,
                     )
@@ -267,7 +326,6 @@ fun MathMemoryScreen(
             }
         )
     }
-
 
     Box(
         modifier = Modifier
@@ -311,7 +369,7 @@ fun MathMemoryScreen(
                     ThemeSelector(
                         builtInThemes = Default,
                         selectedTheme = theme,
-                        unlockedNames = uiState.theme.unlockedThemes,
+                        unlockedNames = uiState.theme.unlockedThemes+"Paper",
                         onSelect = { viewModel.onAction(MathMemoryAction.SelectTheme(it)) }
                     )
 
@@ -392,10 +450,18 @@ fun MathMemoryScreen(
                                     onSelect = { selected ->
                                         viewModel.onAction(MathMemoryAction.InputChanged(selected.value.toString()))
                                         viewModel.onAction(MathMemoryAction.SubmitAnswer)
+                                        val isCorrectAnswer = viewModel.isLastAnswerCorrect() // implement in VM
+                                        if (isCorrectAnswer) {
+                                            soundPool.play(correctSoundId, 1f, 1f, 1, 0, 1f)
+                                        } else {
+                                            soundPool.play(wrongSoundId, 1f, 1f, 1, 0, 1f)
+                                        }
+
                                         tutPhase = TutorialPhase.RESULT
                                     },
                                     selectedTheme = theme
                                 )
+
 
                                 Spacer(Modifier.height(8.dp))
                                 Text(
@@ -414,9 +480,9 @@ fun MathMemoryScreen(
                                 totalXp = viewModel.totalXp.collectAsState().value,
                                 totalCoins = viewModel.totalCoins.collectAsState().value,
                                 xpEarned = viewModel.getXpForLevel(uiState.game.level.number),
-                                coinsEarned = coinsEarned,
-                                streak = light.currentStreak ?:0,
-                                bestStreak = light.bestStreak ?:0,
+                                coinsEarned =calculateMathMemoryCoins(viewModel),
+                                streak = light1?.currentStreak ?:0,
+                                bestStreak = light1?.bestStreak ?:0,
                                 onNext = { viewModel.onAction(MathMemoryAction.NextLevel) },
                                 onRetry = {
                                     viewModel.onAction(MathMemoryAction.ResetGame)
@@ -583,8 +649,10 @@ fun MathMemoryScreen(
                             }
                         }
 
+
+
                         else -> {
-                            Log.d("Light",light.toString())
+                            Log.d("Light",light1.toString())
                             // RESULT - hide header (Box is full size) and show ResultFullScreen
                             ResultFullScreen(
                                 isCorrect = uiState.game.isCorrect,
@@ -592,15 +660,18 @@ fun MathMemoryScreen(
                                 totalXp = totalXp,
                                 totalCoins = totalCoins,
                                 xpEarned = viewModel.getXpForLevel(uiState.game.level.number),
-                                coinsEarned = coinsEarned,
-                                streak = light?.currentStreak ?:0,
-                                bestStreak = light?.bestStreak ?:0,
+                                coinsEarned = calculateMathMemoryCoins(viewModel),
+                                streak = light1?.currentStreak ?:0,
+                                bestStreak = light1?.bestStreak ?:0,
                                 onNext = { viewModel.onAction(MathMemoryAction.NextLevel) },
                                 onRetry = { viewModel.onAction(MathMemoryAction.ResetGame) },
                                 navigateToGames = navigateToGames
                             )
                         }
+
                     }
+
+
                     if (showAnimation) {
                         Box(
                             modifier = Modifier
@@ -684,25 +755,44 @@ private fun TutorialMemorize(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
+        // Instructional Text
         Text(
-            text = "Solve the equation from left to right ",
-            fontSize = 22.sp,
-            fontWeight = FontWeight.Bold,
-            color = Color.White
+            text = "Solve the equation from left to right,\nkeep the answer in memory, \nand choose it on the next screen.",
+            fontSize = 20.sp,
+            fontWeight = FontWeight.SemiBold,
+            color = Color.White,
+            textAlign = TextAlign.Center
         )
 
+        Spacer(modifier = Modifier.height(32.dp))
 
+        // Cards Display
         CardsRow1(
             startNumber = startNumber,
             cards = uiState.game.level.cards,
             textColor = uiState.theme.selectedTheme.textColor
         )
 
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(40.dp))
 
-
-        Button(onClick = onProceed) {
-            Text("I Got It →")
+        // Styled Proceed Button
+        Button(
+            onClick = onProceed,
+            colors = ButtonDefaults.buttonColors(
+                containerColor = Color(0xFFFFC107) // golden yellow
+            ),
+            shape = RoundedCornerShape(16.dp),
+            modifier = Modifier
+                .height(55.dp)
+                .width(200.dp),
+            elevation = ButtonDefaults.buttonElevation(8.dp)
+        ) {
+            Text(
+                text = "Next →",
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color.Black
+            )
         }
     }
 }
@@ -723,12 +813,25 @@ fun ResultFullScreen(
     navigateToGames: () -> Unit
 ) {
     var isVisible by remember { mutableStateOf(false) }
+    var levelVisible by remember { mutableStateOf(false) }
 
 
     // Trigger entrance animation
     LaunchedEffect(Unit) {
         delay(300)
         isVisible = true
+    }
+
+    // Trigger entrance animation
+    LaunchedEffect(Unit) {
+
+        if (isCorrect) {
+            delay(2500)
+            levelVisible = true
+        } else {
+            levelVisible = true
+        }
+
     }
 
     BackHandler {
@@ -780,7 +883,7 @@ fun ResultFullScreen(
                 )
 
                 StatBadge(
-                    icon = painterResource(R.drawable.xp_figma),
+                    icon = painterResource(R.drawable.chat_xp),
                     iconColor = Color(0xFFFFD700),
                     value = xpAnim.toString(),
                     label = "XP"
@@ -866,7 +969,7 @@ fun ResultFullScreen(
                     ) {
                         Image(
                             painter = if (isCorrect) painterResource(R.drawable.figma_trophy) else painterResource(
-                                R.drawable.warning
+                                R.drawable.broken_heart
                             ),
                             contentDescription = "Trophy",
                             modifier = Modifier.size(40.dp)
@@ -912,7 +1015,7 @@ fun ResultFullScreen(
                     ) {
                         StatCard(
                             modifier = Modifier.weight(1f),
-                            icon = painterResource(R.drawable.xp_figma),
+                            icon = painterResource(R.drawable.chat_xp),
                             iconColor = Color(0xFFFFD700),
                             title = "XP EARNED",
                             value = "+${if (isCorrect) xpEarned else 10}",
@@ -964,6 +1067,7 @@ fun ResultFullScreen(
             Button(
                 onClick = if (isCorrect) onNext else onRetry,
                 shape = RoundedCornerShape(36.dp),
+                enabled = levelVisible,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(56.dp),
@@ -1204,5 +1308,7 @@ fun ThemeSelector(
         }
     }
 }
+
+
 
 //prop improve layout of memorize

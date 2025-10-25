@@ -146,9 +146,19 @@ class MathMemoryViewModel @Inject constructor(
             // Get the theme name from profile selectedThemeName or fallback to default
             loadUserStats()
 
-            val savedLevel = profile?.mathMemoryCurrentLevel?.takeIf { it > 0 } ?: 1
+            val savedLevel = (profile?.mathMemoryHighestLevel?.takeIf { it > 0 }) ?: 1
+
+            var level = 1
+
+            if (savedLevel==1) {
+                level=1
+            } else {
+                level=savedLevel+1
+            }
+
+
             Log.d("MathMemoryScreen", "Loading user progress for $userId, start level: $savedLevel")
-            levelManager.setLevel(savedLevel)
+            levelManager.setLevel(level)
             setNewLevel(levelManager.currentLevel())
 
             unlockedThemes = profile?.unlockedThemes?.toSet() ?: setOf(Default[0].name)
@@ -593,6 +603,12 @@ class MathMemoryViewModel @Inject constructor(
         log("Game result updated for user $userId at level $levelNum")
     }
 
+    fun isLastAnswerCorrect(): Boolean {
+        return _uiState.value.game.isCorrect
+    }
+
+
+
     fun startMemorizationTimer(delayMs: Long) {
         viewModelScope.launch {
             delay(delayMs)
@@ -604,20 +620,20 @@ class MathMemoryViewModel @Inject constructor(
     private val _remainingTime = MutableStateFlow(0)
     val remainingTime: StateFlow<Int> = _remainingTime
 
-    fun startMemorizationTimer1(delayMs: Long) {
-
-        viewModelScope.launch {
-            val totalSeconds = (delayMs / 1000).toInt()
-            _remainingTime.value = totalSeconds
-
-            repeat(totalSeconds) {
-                delay(1000)
-                _remainingTime.value = totalSeconds - (it + 1)
-            }
-
-            onAction(MathMemoryAction.RevealCards)
-        }
-    }
+//    fun startMemorizationTimer1(delayMs: Long) {
+//
+//        viewModelScope.launch {
+//            val totalSeconds = (delayMs / 1000).toInt()
+//            _remainingTime.value = totalSeconds
+//
+//            repeat(totalSeconds) {
+//                delay(1000)
+//                _remainingTime.value = totalSeconds - (it + 1)
+//            }
+//
+//            onAction(MathMemoryAction.RevealCards)
+//        }
+//    }
 
     fun getMemorizationTime(levelNumber: Int, numCards: Int): Long {
         Log.d("MathMemoryScreen","Viewmodel levelNumber:+$levelNumber,numCards:+$numCards")
@@ -681,6 +697,9 @@ class MathMemoryViewModel @Inject constructor(
             onAction(MathMemoryAction.RevealCards)
         }
     }
+
+
+
 
 
     fun useHint() {

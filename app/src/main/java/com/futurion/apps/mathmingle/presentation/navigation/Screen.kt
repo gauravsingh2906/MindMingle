@@ -22,8 +22,8 @@ sealed class Screen {
     @Serializable
     data class SudokuScreen(val difficulty: String) : Screen()
 
-    @Serializable
-    data object SudokuHistoryScreen : Screen()
+//    @Serializable
+//    data object SudokuHistoryScreen : Screen()
 
     @Serializable
     data class MathMemoryScreen(val level:Int) : Screen()

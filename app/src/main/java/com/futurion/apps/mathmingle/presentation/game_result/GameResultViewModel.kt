@@ -33,7 +33,7 @@ class GameResultViewModel @Inject constructor(
                     name = "Wizard Avatar",
                     unlockAt = "Level 10",
                     unlocked = profile.overallHighestLevel >= 10,
-                    avatarId = R.drawable.avatar_7,
+                    avatarId = R.drawable.avatar_4,
                     backgroundId = R.drawable.fourthone
                 )
                 val themeInfo = UnlockAvatarInfo(

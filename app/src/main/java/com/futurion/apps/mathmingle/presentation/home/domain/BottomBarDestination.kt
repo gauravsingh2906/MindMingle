@@ -10,12 +10,12 @@ enum class BottomBarDestination(
 ) {
 
     Home(
-        icon = Resources.Icon.Unlock,
+        icon = Resources.Icon.Person,
         title = "Home",
         screen = Screen.Home
     ),
     Games(
-        icon = Resources.Icon.Warning,
+        icon = Resources.Icon.Person,
         title = "Math Mingle",
         screen = Screen.Games
     ),

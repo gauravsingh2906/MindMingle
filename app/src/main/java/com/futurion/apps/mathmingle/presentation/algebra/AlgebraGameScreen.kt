@@ -4,7 +4,6 @@ package com.futurion.apps.mathmingle.presentation.algebra
 import android.app.Activity
 import android.util.Log
 import com.futurion.apps.mathmingle.R
-import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.ExperimentalAnimationApi
@@ -39,12 +38,15 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.airbnb.lottie.compose.*
 import com.futurion.apps.mathmingle.GoogleRewardedAdManager
 import com.futurion.apps.mathmingle.domain.model.UniversalResult
 import com.futurion.apps.mathmingle.presentation.game_result.GameResultViewModel
 import com.futurion.apps.mathmingle.presentation.utils.Constants
-import com.google.codelab.gamingzone.presentation.games.algebra.Question
+import com.futurion.apps.mathmingle.domain.model.Question
 import kotlinx.coroutines.delay
 
 @Composable
@@ -58,16 +60,54 @@ fun AlgebraGameScreen(
 ) {
     var showExitDialog by remember { mutableStateOf(false) }
 
+    val lifecycleOwner = LocalLifecycleOwner.current
+    var isForeground by remember { mutableStateOf(true) }
+
+    // SoundPool setup
+    val soundPool = rememberSoundPool()
+
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            when (event) {
+                Lifecycle.Event.ON_PAUSE -> {
+                    isForeground = false
+                    soundPool.autoPause()
+                    viewModel.pauseTimer() // stop timer logic too
+                }
+
+                Lifecycle.Event.ON_RESUME -> {
+                    isForeground = true
+                    soundPool.autoResume()
+                    viewModel.resumeTimer()
+                }
+
+                else -> {}
+            }
+        }
+
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+            soundPool.release()
+        }
+    }
+
+
     BackHandler {
         showExitDialog = true
     }
+    val context = LocalContext.current
+    val activity = context as? Activity
+
+    var showContinueDialog by remember { mutableStateOf(false) } // 👈 new
+    var resumeAfterAd by remember { mutableStateOf(false) }       // 👈 new
 
     val specialLevels = setOf(5, 10, 14, 20, 28, 35) // your special levels
     var showCoinDialog by remember { mutableStateOf(false) }
     var earnedCoins by remember { mutableStateOf(0) }
     var navigationPending by remember { mutableStateOf(false) }
 
-
+    val adManager = remember { GoogleRewardedAdManager(context, Constants.AD_Unit) }
     var shouldLoadResult by remember { mutableStateOf(false) }
     var shouldNavigate by remember { mutableStateOf(false) }
 
@@ -81,7 +121,7 @@ fun AlgebraGameScreen(
                 TextButton(onClick = {
                     showExitDialog = false
                     viewModel.endGame()
-                    shouldLoadResult=true
+                    shouldLoadResult = true
                     shouldNavigate = true
                 }) {
                     Text("Yes")
@@ -95,6 +135,48 @@ fun AlgebraGameScreen(
         )
     }
 
+    if (showContinueDialog) {
+        AlertDialog(
+            onDismissRequest = { showContinueDialog = false },
+            title = { Text("Continue Game?") },
+            text = { Text("You made a mistake! Watch an ad to continue from the next question?") },
+            confirmButton = {
+                TextButton(onClick = {
+                    showContinueDialog = false
+                    if (activity != null) {
+                        adManager.showRewardedAd(
+                            activity,
+                            onUserEarnedReward = {
+                                viewModel.useHint()
+                                resumeAfterAd = true
+                            },
+                            onClosed = {
+                                // Do nothing special here; the resume will be triggered by LaunchedEffect
+                            }
+                        )
+                    }
+                }) { Text("Watch Ad") }
+            },
+            dismissButton = {
+                TextButton(onClick = {
+                    showContinueDialog = false
+                    shouldLoadResult = true
+                    shouldNavigate = true
+                }) {
+                    Text("Exit")
+                }
+            }
+        )
+    }
+
+    // ----- Handle resume after ad -----
+    LaunchedEffect(resumeAfterAd) {
+        if (resumeAfterAd) {
+            viewModel.resumeNextQuestion()
+            resumeAfterAd = false
+        }
+    }
+
     // States from ViewModel
     val question by viewModel.question.collectAsState()
     val score by viewModel.score.collectAsState()
@@ -105,8 +187,6 @@ fun AlgebraGameScreen(
     val levelCompleted by viewModel.levelCompleted.collectAsState()
     val gameResult by viewModel.gameResult.collectAsState() //
 
-    val context = LocalContext.current
-    val activity = context as? Activity
 
     var textAnswer by remember { mutableStateOf("") }
     var message by remember { mutableStateOf("") }
@@ -119,18 +199,25 @@ fun AlgebraGameScreen(
     }
 
     // 🎵 SoundPool
-    val soundPool = rememberSoundPool()
+
 //    val winSound = rememberSound(context, soundPool, R.raw.win_sound)
 //    val loseSound = rememberSound(context, soundPool, R.raw.lose_sound)
 //    val tickSound = rememberSound(context, soundPool, R.raw.tick_sound)
 
     //  val soundPool = rememberSoundPool()
 
-    val winSoundId = remember { soundPool.load(context, R.raw.game_completed, 1) }
-    val loseSoundId = remember { soundPool.load(context, R.raw.game_over, 1) }
-    val clickSound = remember { soundPool.load(context, R.raw.click_sound, 1) }
+    // New Sounds
+    val correctAnswerSoundId = remember { soundPool.load(context, R.raw.mixkit_achievement, 1) }
+    val wrongAnswerSoundId = remember { soundPool.load(context, R.raw.mixkit_click_error, 1) }
+    val selectNumberSoundId = remember { soundPool.load(context, R.raw.mixkit_select_click, 1) }
 
-    val timer12SoundId = remember { soundPool.load(context, R.raw.tensecond, 1) }
+
+    val winSoundId = remember { soundPool.load(context, R.raw.game_completed, 1) }
+   val loseSoundId = remember { soundPool.load(context, R.raw.game_over, 1) }
+
+
+
+    val timer12SoundId = remember { soundPool.load(context, R.raw.game_sound_timer, 1) }
     val timer3SoundId = remember { soundPool.load(context, R.raw.three_seconds, 1) }
 
     // Keep track of whether the sounds already played to avoid repetition
@@ -156,13 +243,18 @@ fun AlgebraGameScreen(
     }
 
 
-    LaunchedEffect(timeRemaining) {
+    LaunchedEffect(timeRemaining, isForeground) {
+        if (!isForeground) return@LaunchedEffect  // ⏸ Don't play if app is backgrounded
+
         if (timeRemaining in 1..3) {
             soundPool.play(timer3SoundId, 1f, 1f, 1, 0, 1f)
+        } else if (timeRemaining > 3) {
+            soundPool.play(timer12SoundId, 1f, 1f, 1, 0, 1f)
         }
     }
 
-    val adManager = remember { GoogleRewardedAdManager(context, Constants.AD_Unit) }
+
+
     // Facebook ad manager
     //  val facebookAdManager = remember { FacebookRewardedAdManager(context) }
 
@@ -213,7 +305,7 @@ fun AlgebraGameScreen(
                 showResultDialog = false
 
                 // Step 2: Wait for animation duration (~2s or match your lottie file)
-                delay(3000)
+                delay(2500)
 //                Log.e("Result",viewModel.userId.value ?: "guhgu")
 //                val result = gameResultModel.loadResult(viewModel.userId.value ?: "wew","algebra")
 //                Log.e("Result",result.toString())
@@ -231,16 +323,18 @@ fun AlgebraGameScreen(
 
                 val currentLevel = viewModel.level.value
 
-                if (specialLevels.contains(currentLevel)) {
-                    earnedCoins = viewModel.coinsEarned.value
-                    showCoinDialog = true
-                    navigationPending = true
-                    shouldNavigate = false
-                } else {
-                    showCoinDialog = false
-                    navigationPending = false
-                    shouldNavigate = true
-                }
+//                if (specialLevels.contains(currentLevel)) {
+//                    earnedCoins = viewModel.coinsEarned.value
+//                    showCoinDialog = true
+//                    navigationPending = true
+//                    shouldNavigate = false
+//                } else {
+//                    showCoinDialog = false
+//                    navigationPending = false
+//                    shouldNavigate = true
+//                }
+                earnedCoins = viewModel.coinsEarned.value
+                shouldNavigate=true
 
             } else {
                 soundPool.play(loseSoundId, 1f, 1f, 1, 0, 1f)
@@ -249,28 +343,29 @@ fun AlgebraGameScreen(
                 //  showResultDialog = true important
                 //   naviagteToResultScreen()
                 delay(500)
-                shouldLoadResult = true
-                shouldNavigate=true
+                showContinueDialog=true
+                shouldLoadResult = false
+                shouldNavigate = false
             }
-            shouldLoadResult = true
-            shouldNavigate = true
+    //        shouldLoadResult = true
+      //      shouldNavigate = true
         }
     }
 
-    if (showCoinDialog) {
-        CoinClaimDialog(
-            coinsEarned = earnedCoins,
-            onClaim = {
-                showCoinDialog = false
-                navigationPending = false
-                shouldNavigate = true
-            },
-            onDismiss = {
-                showCoinDialog = false
-                shouldNavigate = true
-            }
-        )
-    }
+//    if (showCoinDialog) {
+//        CoinClaimDialog(
+//            coinsEarned = earnedCoins,
+//            onClaim = {
+//                showCoinDialog = false
+//                navigationPending = false
+//                shouldNavigate = true
+//            },
+//            onDismiss = {
+//                showCoinDialog = false
+//                shouldNavigate = true
+//            }
+//        )
+//    }
 
     LaunchedEffect(shouldLoadResult) {
         if (shouldLoadResult) {
@@ -280,15 +375,15 @@ fun AlgebraGameScreen(
                 algebraScore = score
             )
             shouldLoadResult = false // Reset flag
-       //     shouldNavigate = true // Set navigation flag //important
+            shouldNavigate = true // Set navigation flag //important
 
-            if (specialLevels.contains(level) && gameResult?.won == true) {
-                // Wait for user to confirm, don't navigate automatically
-                shouldNavigate = false
-            } else {
-                // For other levels, navigate immediately
-                shouldNavigate = true
-            }
+//            if (specialLevels.contains(level) && gameResult?.won == true) {
+//                // Wait for user to confirm, don't navigate automatically
+//                shouldNavigate = false
+//            } else {
+//                // For other levels, navigate immediately
+//                shouldNavigate = true
+//            }
 
         }
     }
@@ -452,6 +547,11 @@ fun AlgebraGameScreen(
                                         focus.clearFocus()
                                         val correct = ans == q.answer
                                         viewModel.submitAnswer(ans)
+                                        if (correct) {
+                                            soundPool.play(correctAnswerSoundId, 1f, 1f, 1, 0, 1f)
+                                        } else {
+                                            soundPool.play(wrongAnswerSoundId, 1f, 1f, 1, 0, 1f)
+                                        }
                                         feedback =
                                             if (correct) "Great job! you done hard part" else "Oops! Answer: ${q.answer}"
                                         textAnswer = ""
@@ -460,18 +560,33 @@ fun AlgebraGameScreen(
                                 is Question.MissingOperator -> MissingOperatorCard(q = q) { op ->
                                     val correct = op == q.answer
                                     viewModel.submitAnswer(op)
+                                    if (correct) {
+                                        soundPool.play(correctAnswerSoundId, 1f, 1f, 1, 0, 1f)
+                                    } else {
+                                        soundPool.play(wrongAnswerSoundId, 1f, 1f, 1, 0, 1f)
+                                    }
                                     feedback = if (correct) "Nice!" else "Not quite!"
                                 }
 
                                 is Question.TrueFalse -> TrueFalseCard(q = q) { choice ->
                                     val correct = choice == q.isCorrect
                                     viewModel.submitAnswer(choice)
+                                    if (correct) {
+                                        soundPool.play(correctAnswerSoundId, 1f, 1f, 1, 0, 1f)
+                                    } else {
+                                        soundPool.play(wrongAnswerSoundId, 1f, 1f, 1, 0, 1f)
+                                    }
                                     feedback = if (correct) "Correct!" else "Wrong!"
                                 }
 
                                 is Question.Reverse -> ReverseCard(q = q) { op ->
                                     val correct = op == q.answer
                                     viewModel.submitAnswer(op)
+                                    if (correct) {
+                                        soundPool.play(correctAnswerSoundId, 1f, 1f, 1, 0, 1f)
+                                    } else {
+                                        soundPool.play(wrongAnswerSoundId, 1f, 1f, 1, 0, 1f)
+                                    }
                                     feedback = if (correct) "Awesome!" else "Try again!"
                                 }
 
@@ -482,12 +597,22 @@ fun AlgebraGameScreen(
                                     onSubmitMissing = { ans, correctAns ->
                                         focus.clearFocus()
                                         viewModel.submitAnswer(ans)
+                                        if (ans == correctAns) {
+                                            soundPool.play(correctAnswerSoundId, 1f, 1f, 1, 0, 1f)
+                                        } else {
+                                            soundPool.play(wrongAnswerSoundId, 1f, 1f, 1, 0, 1f)
+                                        }
                                         feedback =
                                             if (ans == correctAns) "Great!" else "Answer: $correctAns"
                                         textAnswer = ""
                                     },
                                     onSubmitOp = { op, correctOp ->
                                         viewModel.submitAnswer(op)
+                                        if (op == correctOp) {
+                                            soundPool.play(correctAnswerSoundId, 1f, 1f, 1, 0, 1f)
+                                        } else {
+                                            soundPool.play(wrongAnswerSoundId, 1f, 1f, 1, 0, 1f)
+                                        }
                                         feedback = if (op == correctOp) "Nice!" else "Oops!"
                                     },
                                     onSubmitTF = { choice, correct ->
@@ -603,7 +728,7 @@ fun GameWinAnimation(
 @OptIn(ExperimentalAnimationApi::class)
 @Composable
 private fun GameHud(
-    level: Int, score: Int, timeLeft: Int,totalSeconds:Int, onBack: () -> Unit,
+    level: Int, score: Int, timeLeft: Int, totalSeconds: Int, onBack: () -> Unit,
 ) {
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
 
@@ -724,9 +849,7 @@ private fun MissingNumberCard(
     onTextChange: (String) -> Unit,
     onSubmit: (Int) -> Unit
 ) {
-    val context = LocalContext.current
-    val soundPool = rememberSoundPool()
-    val clickSound = remember { soundPool.load(context, R.raw.win_sound, 1) }
+
     Column(
         Modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(16.dp),
@@ -757,7 +880,6 @@ private fun MissingNumberCard(
             enabled = textAnswer.toIntOrNull() != null,
             shape = RoundedCornerShape(16.dp)
         ) {
-            soundPool.play(clickSound, 1f, 1f, 1, 0, 1f)
             Text("Submit")
         }
     }
@@ -767,9 +889,6 @@ private fun MissingNumberCard(
 private fun MissingOperatorCard(
     q: Question.MissingOperator, onSubmit: (Char) -> Unit
 ) {
-    val context = LocalContext.current
-    val soundPool = rememberSoundPool()
-    val clickSound = remember { soundPool.load(context, R.raw.click_sound, 1) }
 
     Column(
         Modifier.fillMaxWidth(),
@@ -788,9 +907,6 @@ private fun MissingOperatorCard(
 
 @Composable
 private fun TrueFalseCard(q: Question.TrueFalse, onSubmit: (Boolean) -> Unit) {
-    val context = LocalContext.current
-    val soundPool = rememberSoundPool()
-    val clickSound = remember { soundPool.load(context, R.raw.click_sound, 1) }
 
     Column(
         Modifier.fillMaxWidth(),
@@ -807,13 +923,11 @@ private fun TrueFalseCard(q: Question.TrueFalse, onSubmit: (Boolean) -> Unit) {
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Button(
                 onClick = {
-                    soundPool.play(clickSound, 1f, 1f, 1, 0, 1f)
                     onSubmit(true)
                 }, shape = RoundedCornerShape(18.dp)
             ) { Text("TRUE", fontSize = 18.sp) }
             Button(
                 onClick = {
-                    soundPool.play(clickSound, 1f, 1f, 1, 0, 1f)
                     onSubmit(false)
                 }, colors = ButtonDefaults.buttonColors(
                     containerColor = Color(0xFFFFE3E3), contentColor = Color(0xFFB00020)

@@ -7,7 +7,7 @@ object Resources {
 
     object Icon {
 
-        val Unlock = R.drawable.unlock
+
 
 
 
@@ -15,7 +15,7 @@ object Resources {
 
         val BackArrow = R.drawable.back_arrow
 
-        val Warning = R.drawable.warning
+
 
     }
 

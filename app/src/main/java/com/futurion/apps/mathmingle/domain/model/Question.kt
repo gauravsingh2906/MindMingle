@@ -1,6 +1,4 @@
-package com.google.codelab.gamingzone.presentation.games.algebra
-
-import com.futurion.apps.mathmingle.domain.model.GameType
+package com.futurion.apps.mathmingle.domain.model
 
 sealed class Question {
 

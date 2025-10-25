@@ -18,9 +18,9 @@ object SampleGames {
             cardColor = Color(0xFF56CCF2), // Light Blue
             xp = 1200,
             coins = listOf(
-                "Earn coins by winning Sudoku games—higher difficulties give more coins",
-                "Win 3 consecutive games to get a bonus coin",
-                "Complete a game in 5 minutes to get a bonus coin"
+                "Earn coins by winning Sudoku games — higher difficulty levels give more coins",
+                "Maintain a winning streak to earn bonus coins",
+                "Complete a game within 5 minutes to earn extra coins"
             ),
             id = "sudoku",
             steps = listOf(
@@ -40,7 +40,8 @@ object SampleGames {
             xp = 1500,
             coins = listOf(
                 "Earn coins by beating your previous best streak",
-                "Get bonus coins for achieving a streak greater than 3"
+                "Longer streaks give higher coin rewards",
+                "Reach higher levels to earn more coins"
             ),
             id = "math_memory",
             steps = listOf(
@@ -58,8 +59,8 @@ object SampleGames {
             xp = 900,
             coins = listOf(
                 "Earn coins by beating your previous best streak",
-                "Get bonus coins for achieving a streak greater than 3",
-                "Earn coins by reaching a reward levels in the game"
+                "Maintain a winning streak to earn bonus coins",
+                "Reach bonus levels in the game to earn additional coins"
             ),
             id = "algebra",
             aboutGame = "Train your algebra skills with a variety of math challenges including missing numbers, operators, true/false expressions, and more. This game builds your problem-solving and critical thinking in an engaging, step-by-step way",

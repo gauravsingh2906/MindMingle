@@ -18,7 +18,7 @@
             android:value="ca-app-pub-8017073778025924~8424443949" /> <!-- REPLACE with your AdMob App ID -->
 
         <activity
-            android:name=".MainActivity"
+            android:name="com.futurion.apps.mathmingle.MainActivity"
             android:exported="true"
             android:label="@string/app_name"
             android:theme="@style/Theme.MathMingle">

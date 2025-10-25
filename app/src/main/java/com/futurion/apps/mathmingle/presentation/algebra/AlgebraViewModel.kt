@@ -10,7 +10,7 @@ import com.futurion.apps.mathmingle.domain.repository.StatsRepository
 import com.futurion.apps.mathmingle.domain.GameManager
 import com.futurion.apps.mathmingle.domain.model.GameResult
 import com.futurion.apps.mathmingle.domain.LevelConfig
-import com.google.codelab.gamingzone.presentation.games.algebra.Question
+import com.futurion.apps.mathmingle.domain.model.Question
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -65,6 +65,7 @@ class AlgebraViewModel @Inject constructor(
     val timePlayed: StateFlow<Int> = _time
 
 
+
     private val _levelCompleted = MutableStateFlow(false)
     val levelCompleted: StateFlow<Boolean> = _levelCompleted
 
@@ -84,6 +85,8 @@ class AlgebraViewModel @Inject constructor(
 
     private val _gameResult = MutableStateFlow<GameResult?>(null)
     val gameResult: StateFlow<GameResult?> = _gameResult
+
+    private var isTimerPaused = false
 
     private val rewardLevels: Map<Int, Int> = mapOf(
         5 to 20,   // 20 coins at level 5
@@ -163,6 +166,7 @@ class AlgebraViewModel @Inject constructor(
                 delay(1000)
 
                 if (_gameOver.value) break
+                if (isTimerPaused) continue // skip countdown while paused
 
                 _timeRemaining.value--
             }
@@ -177,6 +181,19 @@ class AlgebraViewModel @Inject constructor(
     private fun onTimeOver() {
         // Handle time over - game over or next question
     }
+
+    fun pauseTimer() {
+        isTimerPaused = true
+        Log.d("Timer", "Paused at ${_timeRemaining.value} seconds")
+    }
+
+    fun resumeTimer() {
+        if (_gameOver.value) return
+
+        isTimerPaused = false
+        Log.d("Timer", "Resumed with ${_timeRemaining.value} seconds left")
+    }
+
 
 
     fun submitAnswer(userAnswer: Any?) {
@@ -241,8 +258,10 @@ class AlgebraViewModel @Inject constructor(
 //        }
         viewModelScope.launch {
             _userId.value = statsRepository.initUserIfNeeded()
+            val perGameStats = statsRepository.getPerGameStats(_userId.value ?: "1","algebra")
             Log.d("Latest-Id", _userId.value ?: "fake")
         }
+
 
 
         // If game over (wrong answer or time out)
@@ -298,11 +317,26 @@ class AlgebraViewModel @Inject constructor(
             Log.d("Streak", "Best streak: ${_bestStreak.value}")
 
 
-            _coinsEarned.value = if (_currentStreak.value >= 2) {
-                30
-            } else {
-                rewardLevels[currentLevel] ?: 0
+//            _coinsEarned.value = if (_currentStreak.value >= 2) {
+//                30
+//            } else {
+//                rewardLevels[currentLevel] ?: 0
+//            }
+            viewModelScope.launch {
+                val perGameStats = statsRepository.getPerGameStats(_userId.value ?: "1","algebra")
+                val currentStreak = perGameStats?.currentStreak?.plus(1)
+                val bestStreak = perGameStats?.bestStreak?.plus(1)
+                _coinsEarned.value = calculateAlgebraCoins(
+                    levelReached = currentLevel,
+                    isLevelCleared = true,
+                    currentStreak =  currentStreak ?:0,
+                    bestStreak = bestStreak ?:0
+                )
+                Log.d("CoinsEA",_coinsEarned.value.toString())
             }
+
+
+
 
 
             _gameResult.value = GameResult(
@@ -326,6 +360,7 @@ class AlgebraViewModel @Inject constructor(
 //            }
 
             viewModelScope.launch {
+                delay(1500)
                 statsRepository.updateGameResult(
                     userId = statsRepository.initUserIfNeeded() ?: "987",
                     gameName = "algebra",
@@ -351,6 +386,63 @@ class AlgebraViewModel @Inject constructor(
         }
 
     }
+
+    fun calculateAlgebraCoins(
+        levelReached: Int,
+        isLevelCleared: Boolean,
+        currentStreak: Int,
+        bestStreak: Int
+    ): Int {
+        if (!isLevelCleared) return 0
+
+        Log.d("CoinsEA","CurrentStreak: ${currentStreak}")
+        Log.d("CoinsEA","BestStreak: ${bestStreak}")
+
+        var coins = 0
+
+        // 🎯 Base reward by level range
+        coins += when (levelReached) {
+            in 1..5 -> (3..6).random()
+            in 6..10 -> (6..10).random()
+            in 11..20 -> (10..15).random()
+            in 21..30 -> (15..25).random()
+            else -> (25..35).random()
+        }
+
+        // 🔥 Streak rewards (not too generous)
+        coins += when {
+            currentStreak in 3..5 -> 8
+            currentStreak in 6..10 -> 15
+            currentStreak > 10 -> 25
+            else -> 0
+        }
+
+        // 🧠 New best streak reward (rare)
+        if (currentStreak > bestStreak) {
+            coins += 20
+        }
+
+        // 🎁 Milestone bonus levels (big dopamine spikes)
+        coins += when (levelReached) {
+            5 -> 15
+            10 -> 25
+            15 -> 35
+            20 -> 45
+            25 -> 55
+            30 -> 70
+            40 -> 90
+            50 -> 120
+            else -> 0
+        }
+
+        // 🍀 Small random chance (3–5%) of "Brain Bonus"
+        if ((1..100).random() <= 5) {
+            coins += (10..25).random()
+        }
+
+        return coins
+    }
+
 
 
     fun calculateXp(won: Boolean, playerLevel: Int): Int {
@@ -473,7 +565,33 @@ class AlgebraViewModel @Inject constructor(
         }
 
         _gameOver.value = true
+
     }
+
+    fun resumeNextQuestion() {
+        viewModelScope.launch {
+            _gameOver.value = false
+            _levelCompleted.value = false
+            startNext() // continue to next question
+        }
+    }
+
+    fun triggerGameOver() {
+        viewModelScope.launch {
+            _gameOver.value = true
+            _gameResult.value = GameResult(
+                level = currentLevel,
+                won = false,
+                xpEarned = 0,
+                score = 0,
+                streak = 0 ,
+                bestStreak = 7,
+                hintsUsed = 7,
+                timeSpent = 8,
+            )
+        }
+    }
+
 
 }
 

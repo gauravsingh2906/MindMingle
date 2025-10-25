@@ -1,7 +1,7 @@
 package com.futurion.apps.mathmingle.domain
 
 import com.futurion.apps.mathmingle.domain.model.GameType
-import com.google.codelab.gamingzone.presentation.games.algebra.Question
+import com.futurion.apps.mathmingle.domain.model.Question
 import kotlin.random.Random
 
 class GameManager {
@@ -9,6 +9,7 @@ class GameManager {
     fun nextQuestion(level: Int): Question {
         val config = LevelConfig(level.coerceAtLeast(1))
         val pick = Random.nextInt(100)
+
         val type = when {
             level <= 5 -> if (pick < 70) GameType.MISSING_NUMBER else GameType.TRUE_FALSE
             level <= 10 -> when {
@@ -24,7 +25,13 @@ class GameManager {
                 else -> GameType.TRUE_FALSE
             }
 
-            else -> GameType.MIX
+            else -> when {
+                pick < 25 -> GameType.MISSING_OPERATOR
+                pick < 50 -> GameType.REVERSE
+                pick < 75 -> GameType.TRUE_FALSE
+                else -> GameType.MIX
+            }
+
         }
 
         return when (type) {

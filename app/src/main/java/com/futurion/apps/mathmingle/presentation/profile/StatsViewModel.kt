@@ -5,7 +5,7 @@ import android.util.Log
 import androidx.annotation.RequiresApi
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.futurion.apps.mathmingle.R
+import com.futurion.apps.mindmingle.R
 import com.futurion.apps.mathmingle.data.local.entity.OverallProfileEntity
 import com.futurion.apps.mathmingle.data.local.entity.PerGameStatsEntity
 import com.futurion.apps.mathmingle.domain.mapping.mapToGameStats
@@ -14,8 +14,13 @@ import com.futurion.apps.mathmingle.presentation.games.GameStats
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.time.Duration
 import java.time.LocalDateTime
@@ -23,7 +28,7 @@ import javax.inject.Inject
 
 @HiltViewModel
 class StatsViewModel @Inject constructor(
-    private val statsRepo: StatsRepository,
+    val statsRepo: StatsRepository,
 ) : ViewModel() {
 
     private val _userId = MutableStateFlow<String?>(null)
@@ -32,11 +37,20 @@ class StatsViewModel @Inject constructor(
 //    private val _missions = MutableStateFlow<List<DailyMissionEntity>>(emptyList())
 //    val missions: StateFlow<List<DailyMissionEntity>> = _missions
 
-    private val _gameStats = MutableStateFlow<List<GameStats>>(emptyList())
-    val gameStats: StateFlow<List<GameStats>> = _gameStats.asStateFlow()
+//    private val _gameStats = MutableStateFlow<List<GameStats>>(emptyList())
+//    val gameStats: StateFlow<List<GameStats>> = _gameStats.asStateFlow()
 
     private val _profile = MutableStateFlow<OverallProfileEntity?>(null)
     val profile: StateFlow<OverallProfileEntity?> = _profile
+
+    val profile1: StateFlow<OverallProfileEntity?> = _userId
+        .filterNotNull() // wait until userId is set
+        .flatMapLatest { id -> statsRepo.getProfileFlow(id) }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = null
+        )
 
     private val _perGameStats = MutableStateFlow<List<PerGameStatsEntity>>(emptyList())
     val perGameStats: StateFlow<List<PerGameStatsEntity>> = _perGameStats
@@ -54,6 +68,9 @@ class StatsViewModel @Inject constructor(
     var defaultAvatarId = listOf<Int>(R.drawable.avatar_1, R.drawable.avatar_5)
     val defaultUnlockedAvatars = defaultAvatarId
 
+    private val _perGameStats1 =
+        MutableStateFlow<Map<String, PerGameStatsEntity?>>(emptyMap())
+    val perGameStats1: StateFlow<Map<String, PerGameStatsEntity?>> = _perGameStats1.asStateFlow()
 
     init {
         // create user row if needed and set _userId
@@ -61,8 +78,26 @@ class StatsViewModel @Inject constructor(
             val id = statsRepo.initUserIfNeeded()
             Log.d("Id-stats", id)
             _userId.value = id
+
+            id?.let {
+                listOf("math_memory", "sudoku", "algebra").forEach { gameName ->
+                    launch {
+                        statsRepo.getPerGameStatsFlow(it, gameName).collect { stats ->
+                            Log.d("Stats", "StatsView ${stats.toString()}")
+                            _perGameStats1.update { currentMap ->
+                                currentMap + (gameName to stats)
+                            }
+                        }
+                    }
+                }
+            }
+
             loadProfile(id)
            // loadMissions(id)
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                scheduleDailyAdReset()
+            }
         }
     }
 
@@ -76,7 +111,8 @@ class StatsViewModel @Inject constructor(
                 statsRepo.getPerGameStats(userId, "algebra")
             )
             _perGameStats.value = perGameList
-            _gameStats.value = mapToGameStats(perGameList)
+            Log.d("BestStreak", "PER GAME STATS:${_perGameStats.value}")
+      //      _gameStats.value = mapToGameStats(perGameList)
         }
     }
 
@@ -152,6 +188,34 @@ class StatsViewModel @Inject constructor(
 
 
 
+    @RequiresApi(Build.VERSION_CODES.O)
+    fun scheduleDailyAdReset() {
+        val now = LocalDateTime.now()
+        val midnight = now.toLocalDate().plusDays(1).atStartOfDay()
+        val delayMillis = Duration.between(now, midnight).toMillis()
+
+        viewModelScope.launch {
+            delay(delayMillis)
+            resetDailyAds()
+            // Schedule again for the next day
+            scheduleDailyAdReset()
+        }
+    }
+
+    private fun resetDailyAds() {
+        viewModelScope.launch {
+            val userIdValue = _userId.value ?: return@launch
+            val profile = statsRepo.getProfile(userIdValue) ?: return@launch
+            // reset count and last watched date
+            val updatedProfile = profile.copy(
+                adWatchCount = 0,
+                adLastWatchedDate = getTodayDateMillis()
+            )
+            statsRepo.updateProfile(updatedProfile)
+            loadProfile(userIdValue)
+        }
+    }
+
 
 
 
@@ -210,8 +274,10 @@ class StatsViewModel @Inject constructor(
     fun unlockAvatar(userId: String, avatarId: Int) = viewModelScope.launch {
         val profile = statsRepo.getProfile(userId) ?: return@launch
 
+        Log.d("AvatarId",avatarId.toString())
         val cost = when (avatarId) {
-            R.drawable.avatar_4, R.drawable.avatar_5 -> 500
+            R.drawable.avatar_4 -> 400
+            R.drawable.avatar_5 -> 1500
             else -> 0
         }
         if (cost > 0 && profile.coins < cost) {

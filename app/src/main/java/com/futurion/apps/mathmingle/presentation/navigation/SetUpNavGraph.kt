@@ -57,12 +57,13 @@ import com.futurion.apps.mathmingle.presentation.profile.StatsViewModel
 import com.futurion.apps.mathmingle.presentation.sudoku.SudokuGameEvent
 import com.futurion.apps.mathmingle.presentation.sudoku.SudokuScreen
 import com.futurion.apps.mathmingle.presentation.sudoku.SudokuViewModel
-import com.futurion.apps.mathmingle.presentation.sudoku.sudoku_history.SavedSudokuResultsScreen
+
 import com.futurion.apps.mathmingle.presentation.themes_screen.ThemeUnlockScreen
 import com.futurion.apps.mathmingle.presentation.themes_screen.ThemeViewModel
 import com.futurion.apps.mathmingle.presentation.utils.Constants
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -85,7 +86,7 @@ fun SetUpNavGraph(
 
             val statsViewModel: StatsViewModel = hiltViewModel()
 
-            val profile by statsViewModel.profile.collectAsStateWithLifecycle()
+            val profile by statsViewModel.profile1.collectAsStateWithLifecycle()
 
             LaunchedEffect(profile?.coins) {
                 Log.d("Coins", profile?.coins.toString())
@@ -99,7 +100,11 @@ fun SetUpNavGraph(
                 profile = profile ?: OverallProfileEntity(userId = "e"),
                 viewModel = statsViewModel,
                 navigateToThemeUnlock = {
-                    navController.navigate(Screen.ThemeSelectionScreen(it))
+                    navController.navigate(Screen.ThemeSelectionScreen(it)) {
+                        popUpTo<Screen.ThemeSelectionScreen> {
+                            inclusive=true
+                        }
+                    }
                 }
             )
         }
@@ -151,9 +156,6 @@ fun SetUpNavGraph(
                 navigateBack = {
                     navController.popBackStack()
                 },
-                navigateToSudokuResult = {
-                    navController.navigate(Screen.SudokuHistoryScreen)
-                },
                 userId = userId ?:"",
                 navigateToThemeUnlock = {
                     navController.navigate(Screen.ThemeSelectionScreen(it))
@@ -202,7 +204,6 @@ fun SetUpNavGraph(
 
                 },
                 maxUnlockedLevel = maxUnlocked,
-                rewardLevels = viewModel.generateRewardLevels()
             )
 
 
@@ -244,8 +245,8 @@ fun SetUpNavGraph(
                                 newViewModel = statsViewModel,
                                 navController = navController,
                                 difficulty = stringDifficulty,
-                                entity = entity,
-                                coins = calculateCoins(viewModel,entity)
+                                coins = calculateCoins(viewModel, entity),
+                                entity = entity
                             )
                         }
 
@@ -273,6 +274,9 @@ fun SetUpNavGraph(
             var showHint by remember { mutableStateOf(false) }
             val googleAdManager = remember { GoogleRewardedAdManager(context, Constants.AD_Unit) }
 
+
+
+            val gameClick = remember { soundPool.load(context, R.raw.mixkit_game_click, 1) }
             // Wrap everything in a Box so we can overlay
             Box(modifier = Modifier.fillMaxSize()) {
 
@@ -284,6 +288,7 @@ fun SetUpNavGraph(
                     state = state.value,
                     onAction = viewModel::onAction,
                     onHint = {
+                        soundPool.play(gameClick, 1f, 1f, 1, 0, 1f)
                         if (!isInternetAvailable(context)) {
                             Toast.makeText(
                                 context,
@@ -301,13 +306,9 @@ fun SetUpNavGraph(
                                     Toast.makeText(context, "Use your hint now", Toast.LENGTH_LONG).show()
                                 },
                                 onClosed = {
-                                    if (!showHint) {
-                                        Toast.makeText(
-                                            context,
-                                            "Ad not ready, please try again.",
-                                            Toast.LENGTH_SHORT
-                                        ).show()
-                                    }
+//                                    if (!showHint) {
+//                                        Toast.makeText(context, "Ad not ready, please try again.", Toast.LENGTH_SHORT).show()
+//                                    }
                                 }
                             )
                         }
@@ -350,13 +351,7 @@ fun SetUpNavGraph(
         }
 
 
-        composable<Screen.SudokuHistoryScreen> {
-            SavedSudokuResultsScreen(
-                onBackClick = {
-                    navController.navigateUp()
-                }
-            )
-        }
+
 
         composable<Screen.MathMemoryScreen> {
 
@@ -447,9 +442,11 @@ fun SetUpNavGraph(
         }
 
         composable<Screen.ThemeSelectionScreen> {
-            val userId = it.toRoute<Screen.ThemeSelectionScreen>()
+            val userId = it.toRoute<Screen.ThemeSelectionScreen>().userId
 
             val mathMemoryViewModel: MathMemoryViewModel = hiltViewModel()
+
+            val viewModel : StatsViewModel = hiltViewModel()
 
             val themeViewModel: ThemeViewModel = hiltViewModel()
 
@@ -461,6 +458,7 @@ fun SetUpNavGraph(
                 },
                 onBackClick = {
                     navController.navigateUp()
+                    viewModel.loadProfile(userId)
                 }
             )
         }
@@ -599,6 +597,62 @@ fun SetUpNavGraph(
 
 }
 
+//private fun handleSudokuWin(
+//    viewModel: SudokuViewModel,
+//    newViewModel: StatsViewModel,
+//    navController: NavController,
+//    difficulty: String,
+//    coins: Int,
+//    entity: PerGameStatsEntity
+//) {
+//    val state = viewModel.state.value
+//
+//
+//    newViewModel.viewModelScope.launch {
+//
+//        withContext(Dispatchers.IO) {
+//            newViewModel.updateGameAndProfile(
+//                userId = newViewModel.userId.value ?: "name",
+//                gameName = "sudoku",
+//                level = 1,
+//                won = true,
+//                xp = state.xpEarned,
+//                hints = state.hintsUsed,
+//                timeSec = state.elapsedTime.toLong(),
+//                coins = coins,
+//                currentStreak = viewModel.currentStreak.value,
+//                bestStreak = viewModel.bestStreak.value,
+//                resultTitle = "🎉 EXCELLENT!",
+//                resultMessage = "You solved the puzzle perfectly!",
+//                isMatchWon = true,
+//                eachGameXp = state.xpEarned,
+//                eachGameCoin = 1,
+//            )
+//            newViewModel.loadProfile(userId = newViewModel.userId.value ?: "name")
+//        }
+//
+//        withContext(Dispatchers.Main) {
+//            // ✅ Navigate to CommonResultScreen with Sudoku data
+//            navigateToSudokuResult(
+//                navController = navController,
+//                state = state,
+//                difficulty = difficulty,
+//                coins = coins,
+//                currentStreak = entity.currentStreak,
+//                bestStreak = entity.bestStreak,
+//                profileData = newViewModel.profile.value,
+//                isWin = true,
+//                newViewModel = newViewModel,
+//            )
+//        }
+//
+//    }
+//
+//
+//
+//
+//}
+
 private fun handleSudokuWin(
     viewModel: SudokuViewModel,
     newViewModel: StatsViewModel,
@@ -610,25 +664,16 @@ private fun handleSudokuWin(
     val state = viewModel.state.value
 
 
-
-
-
-    // Update all your existing stats
-//    userStatsViewModel.recordGameResult(
-//        gameName = "sudoku",
-//        isWin = true,
-//        isDraw = false,
-//        xpEarned = state.xpEarned,
-//    )
-
-    val time = (state.elapsedTime) / 60
-//    newViewModel.updateProgress(
-//        gameName = "sudoku",
-//        minutes = time,
-//        missionType = "play_games"
-//    )
-
     newViewModel.viewModelScope.launch {
+        // ✅ Fetch the latest stats
+        val latestEntity = newViewModel.statsRepo.getPerGameStats(
+            newViewModel.userId.value ?: return@launch,
+            "sudoku"
+        ) ?: entity
+
+        // ✅ Pass 1 for current streak to avoid double-counting
+        val correctCurrentStreak = 1
+        val correctBestStreak = maxOf(latestEntity.bestStreak, latestEntity.currentStreak + 1)
 
         withContext(Dispatchers.IO) {
             newViewModel.updateGameAndProfile(
@@ -640,8 +685,8 @@ private fun handleSudokuWin(
                 hints = state.hintsUsed,
                 timeSec = state.elapsedTime.toLong(),
                 coins = coins,
-                currentStreak = viewModel.currentStreak.value,
-                bestStreak = viewModel.bestStreak.value,
+                currentStreak = correctCurrentStreak,
+                bestStreak = correctBestStreak,
                 resultTitle = "🎉 EXCELLENT!",
                 resultMessage = "You solved the puzzle perfectly!",
                 isMatchWon = true,
@@ -652,47 +697,42 @@ private fun handleSudokuWin(
         }
 
         withContext(Dispatchers.Main) {
-            // ✅ Navigate to CommonResultScreen with Sudoku data
             navigateToSudokuResult(
                 navController = navController,
                 state = state,
                 difficulty = difficulty,
                 coins = coins,
-                currentStreak = entity.currentStreak,
-                bestStreak = entity.bestStreak,
+                currentStreak = latestEntity.currentStreak + 1,
+                bestStreak = correctBestStreak,
                 profileData = newViewModel.profile.value,
                 isWin = true,
                 newViewModel = newViewModel,
             )
         }
-
     }
-
-
-
-
 }
+
+
+
+
+
+
 
 private fun handleSudokuLoss(
     viewModel: SudokuViewModel,
     newViewModel: StatsViewModel,
     navController: NavController,
     difficulty: String,
-    coins: Int, // this is a per game coin
+    coins: Int, // per game coin
     entity: PerGameStatsEntity
 ) {
     val state = viewModel.state.value
 
-    // Update all your existing stats
-
-
-    val time = (state.elapsedTime) / 60
-
-    val bestStreak = entity.bestStreak
-    Log.d("BestStreak","Win: $entity")
-    Log.d("BestStreak","Loss: $bestStreak")
-
     newViewModel.viewModelScope.launch {
+        // ✅ On loss, current streak should reset to 0
+        val correctCurrentStreak = 0
+        val correctBestStreak = entity.bestStreak // best streak remains unchanged
+
         withContext(Dispatchers.IO) {
             newViewModel.updateGameAndProfile(
                 userId = newViewModel.userId.value ?: "name",
@@ -703,35 +743,34 @@ private fun handleSudokuLoss(
                 hints = state.hintsUsed,
                 timeSec = state.elapsedTime.toLong(),
                 coins = coins,
-                currentStreak = viewModel.currentStreak.value,
-                bestStreak = bestStreak,
+                currentStreak = correctCurrentStreak,
+                bestStreak = correctBestStreak,
                 resultTitle = "😔 GAME OVER",
                 resultMessage = "You made 3 mistakes. Better luck next time!",
                 isMatchWon = false,
                 eachGameXp = state.xpEarned,
                 eachGameCoin = 0,
             )
+
         }
+
         withContext(Dispatchers.Main) {
-            // ✅ Navigate to CommonResultScreen with Sudoku data
+            // ✅ Navigate to result screen with correct streaks
             navigateToSudokuResult(
                 newViewModel,
                 navController = navController,
                 state = state,
                 difficulty = difficulty,
-                currentStreak = entity.currentStreak,
-                bestStreak = entity.bestStreak,
+                currentStreak = correctCurrentStreak,
+                bestStreak = correctBestStreak,
                 profileData = newViewModel.profile.value,
                 isWin = false,
-                coins = coins, // navigating with each game coins
+                coins = coins, // each game coin
             )
         }
     }
-
-
-
-
 }
+
 
 private fun navigateToSudokuResult(
     newViewModel: StatsViewModel,
@@ -744,16 +783,26 @@ private fun navigateToSudokuResult(
     isWin: Boolean,
     coins: Int
 ) {
-    Log.d("BestStreak",bestStreak.toString())
+
+    val result = newViewModel.perGameStats1.value["sudoku"]
+    Log.d("Solution",result.toString())
 
     val resutl = newViewModel.perGameStats.value.find { it.gameName == "sudoku" }
+
+    val totalCoins = newViewModel.profile1.value
+    Log.d("TotalCoins",totalCoins.toString())
+
+
+
+    Log.d("BESTSTREAK",resutl.toString())
+    Log.d("BestStreak",bestStreak.toString())
     // Create UniversalResult for Sudoku
     val universalResult = UniversalResult(
         title = if (isWin) "EXCELLENT" else "GAME OVER",
         resultTitle = if (isWin) "🎉 EXCELLENT!" else "😔 GAME OVER", // Sudoku doesn't use score
         resultMessage = "Better luck next time!",
         won = isWin,
-        isMatchWon = true,
+        isMatchWon = isWin,
         bestTimeSec = state.elapsedTime,
         difficulty = difficulty, // Add if you have avatar unlocks
         hintsUsed = state.hintsUsed,
@@ -763,9 +812,9 @@ private fun navigateToSudokuResult(
         xpEarned = profileData?.currentLevelXP?.plus(state.xpEarned) ?: 0,
         eachGameXp = state.xpEarned,
         eachGameCoin = coins,
-        coinsEarned = profileData?.coins?.plus(coins) ?: 0,
-        currentStreak = (resutl?.currentStreak?.plus(1)) ?: 0,
-        bestStreak = resutl?.bestStreak?.plus(1) ?: 0,
+        coinsEarned = (profileData?.coins?.plus(coins)) ?: 0,
+        currentStreak = currentStreak,
+        bestStreak = bestStreak,
     )
 
     Log.d("SudokuUniversal",universalResult.toString())
@@ -783,21 +832,31 @@ private fun navigateToSudokuResult(
 fun calculateCoins(viewModel: SudokuViewModel,profileEntity: PerGameStatsEntity): Int {
     var totalCoins = 0
     val profile = profileEntity.currentStreak+1
-    Log.d("Solution",profile.toString())
+    Log.d("Solution","Coins: ${profile.toString()}")
     if (profile >= 3) {
-        totalCoins += 30       // Streak bonus
+        totalCoins += when {
+            profile in 3..5 -> 10
+            profile in 6..10 -> 20
+            profile > 10 -> 40
+            else -> 0
+        }       // Streak bonus
     }
     if (viewModel.state.value.isGameWon) {
         totalCoins += when (viewModel.difficulty) {
-            Difficulty.EASY -> 5
-            Difficulty.MEDIUM -> 15
-            Difficulty.HARD -> 30
+            Difficulty.EASY -> (5..8).random()
+            Difficulty.MEDIUM -> (10..18).random()
+            Difficulty.HARD -> (20..35).random()
         }
     }
     val totalTime = viewModel.state.value.elapsedTime
     Log.d("Solution","TotalTime:$totalTime")
-    if (totalTime < 300) {
-        totalCoins += 15       // Fast finish bonus
+    if (viewModel.state.value.isGameWon) {
+        if (totalTime<300) {
+            totalCoins += 15
+        } // Fast finish bonus
+    }
+    if ((1..100).random() <= 5) {
+        totalCoins += (10..30).random() // rare jackpot
     }
     return totalCoins
 }

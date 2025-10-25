@@ -97,6 +97,5 @@ dependencies {
     implementation(libs.messagebar.kmp)
 
     implementation("com.airbnb.android:lottie-compose:6.6.7")
-    implementation("com.facebook.android:audience-network-sdk:6.14.0")
     implementation("com.google.android.gms:play-services-ads:23.0.0")
 }

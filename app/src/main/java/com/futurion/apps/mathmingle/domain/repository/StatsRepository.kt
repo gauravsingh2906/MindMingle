@@ -28,6 +28,9 @@ interface StatsRepository {
         timeSpentSeconds: Long
     )
 
+    fun getPerGameStatsFlow(userId: String, gameName: String): Flow<PerGameStatsEntity?>
+
+
     suspend fun initUserIfNeeded(username: String?="Player"): String
 
     suspend fun updateUsername(userId: String, newUsername: String)
@@ -40,10 +43,12 @@ interface StatsRepository {
     suspend fun updateCoins(userId: String, newCoins: Int)
 
     suspend fun getProfile(userId: String): OverallProfileEntity?
+    suspend fun getProfileFlow(userId: String): Flow<OverallProfileEntity?>
 
     suspend fun updateProfile(profile: OverallProfileEntity)
     suspend fun getPerGameStats(userId: String, gameName: String): PerGameStatsEntity?
 
+    suspend fun getAllGameStatsFlow(userId: String,gameName: String): Flow<OverallProfileEntity>
 
     suspend fun updateMathMemoryCurrentLevel(userId: String, level: Int)
 

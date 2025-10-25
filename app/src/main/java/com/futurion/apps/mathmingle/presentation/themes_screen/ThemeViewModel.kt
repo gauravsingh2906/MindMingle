@@ -66,9 +66,10 @@ import javax.inject.Inject
 
 data class UnlockableTheme(
     val theme: GameTheme,
-    val unlockLevel: Int,
     val coinCost: Int
 )
+
+//val unlockLevel: Int,
 
 @HiltViewModel
 class ThemeViewModel @Inject constructor(
@@ -85,13 +86,13 @@ class ThemeViewModel @Inject constructor(
 
 
     val unlockableThemes = listOf(
-        UnlockableTheme(Default[0], 1, 0),      // Default unlocked theme
-        UnlockableTheme(Default[1], 5, 100),
-        UnlockableTheme(Default[2], 10, 300),
-        UnlockableTheme(Default[3], 15, 500),
-        UnlockableTheme(Default[4], 20, 1000),
-        UnlockableTheme(Default[5], 30, 1200),
-        UnlockableTheme(Default[6], 50, 1500),
+        UnlockableTheme(Default[0],  0),      // Default unlocked theme
+        UnlockableTheme(Default[1],  100),
+        UnlockableTheme(Default[2],  200),
+        UnlockableTheme(Default[3],  400),
+        UnlockableTheme(Default[4],  900),
+        UnlockableTheme(Default[5],  1100),
+        UnlockableTheme(Default[6],  1500),
     )
 
     private val _unlockedThemes = mutableStateOf<Set<String>>(setOf())

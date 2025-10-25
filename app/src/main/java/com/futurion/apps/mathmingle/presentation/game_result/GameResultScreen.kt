@@ -1,5 +1,6 @@
 package com.futurion.apps.mathmingle.presentation.game_result
 
+import android.util.Log
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.*
 import com.futurion.apps.mathmingle.R
@@ -75,7 +76,7 @@ fun GameResultScreen(
     val soundPool = rememberSoundPool()
 
     val winSoundId = remember { soundPool.load(context, R.raw.game_completed, 1) }
-    val loseSoundId = remember { soundPool.load(context, R.raw.game_over, 1) }
+   // val loseSoundId = remember { soundPool.load(context, R.raw.coin, 1) }
 
 
 //    if (gameType== AllGames.SUDOKU) {
@@ -88,6 +89,7 @@ fun GameResultScreen(
 
     LaunchedEffect(data.isMatchWon) {
         if (data.isMatchWon == true && data.eachGameCoin > 0) {
+            Log.d("Coin", "GameResultScreen: $data")
             val coinSoundId = soundPool.load(context, R.raw.coin, 1)
             // Wait until loaded before playing
             delay(200)
@@ -210,7 +212,7 @@ fun GameResultScreen(
 
                 // Total XP
                 StatBadge(
-                    icon = painterResource(R.drawable.xp_figma),
+                    icon = painterResource(R.drawable.chat_xp),
                     iconColor = Color(0xFFFFD700),
                     value = data.xpEarned.toString(),
                     label = "XP"
@@ -257,7 +259,7 @@ fun GameResultScreen(
 
                         Image(
                             painter = if (data.isMatchWon == true) painterResource(R.drawable.figma_trophy) else painterResource(
-                                R.drawable.warning
+                                R.drawable.broken_heart
                             ),
                             contentDescription = "Trophy",
                         )
@@ -378,7 +380,7 @@ private fun AlgebraStatsSection(data: UniversalResult,animatedCoins:Int) {
         ) {
             StatCard(
                 modifier = Modifier.weight(1f),
-                icon = painterResource(R.drawable.xp_figma),
+                icon = painterResource(R.drawable.chat_xp),
                 iconColor = Color(0xFFFFD700),
                 title = "XP EARNED",
                 value = "+${data.eachGameXp}",
@@ -425,7 +427,7 @@ private fun SudokuStatsSection(data: UniversalResult, difficulty: String,animate
         ) {
             StatCard(
                 modifier = Modifier.weight(1f),
-                icon = painterResource(R.drawable.xp_figma),
+                icon = painterResource(R.drawable.chat_xp),
                 iconColor = Color(0xFFFFD700),
                 title = "XP EARNED",
                 value = "+${data.eachGameXp}",
@@ -512,7 +514,7 @@ private fun MemoryMixStatsSection(data: UniversalResult, currentLevel: Int) {
         ) {
             StatCard(
                 modifier = Modifier.weight(1f),
-                icon = painterResource(R.drawable.xp_figma),
+                icon = painterResource(R.drawable.chat_xp),
                 iconColor = Color(0xFFFFD700),
                 title = "XP EARNED",
                 value = "+${data.xpEarned}",
@@ -536,7 +538,7 @@ private fun MemoryMixStatsSection(data: UniversalResult, currentLevel: Int) {
         ) {
             StatCard(
                 modifier = Modifier.weight(1f),
-                icon = painterResource(R.drawable.warning),
+                icon = painterResource(R.drawable.broken_heart),
                 iconColor = Color(0xFF9C27B0),
                 title = "FINAL SCORE",
                 value = "${data.score ?: 0}",

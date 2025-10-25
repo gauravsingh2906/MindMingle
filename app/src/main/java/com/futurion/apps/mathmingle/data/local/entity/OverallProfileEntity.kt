@@ -38,5 +38,4 @@ data class OverallProfileEntity(
     val unlockedThemes: Set<String> = emptySet(),
     val adWatchCount: Int = 0,              // how many ads watched today
     val adLastWatchedDate: Long = 0L        // timestamp of last ad (used for resetting per day)
-
 )

@@ -6,7 +6,6 @@ import com.futurion.apps.mathmingle.data.local.AppDatabase
 import com.futurion.apps.mathmingle.data.local.dao.LevelProgressDao
 import com.futurion.apps.mathmingle.data.local.dao.OverallProfileDao
 import com.futurion.apps.mathmingle.data.local.dao.PerGameStatsDao
-import com.futurion.apps.mathmingle.data.local.dao.SudokuResultDao
 import com.futurion.apps.mathmingle.data.repository.GameResultRepositoryImpl
 import com.futurion.apps.mathmingle.data.repository.LevelRepositoryImpl
 import com.futurion.apps.mathmingle.data.repository.NetworkConnectivityObserverImpl
@@ -72,10 +71,7 @@ object DatabaseModule {
   //  @Provides
   //  fun provideSudokuResultDao(db: AppDatabase): SudokuResultDao = db.sudokuResultDao()
 
-    @Provides
-    fun provideSudokuResultDao(database: AppDatabase): SudokuResultDao {
-        return database.sudokuResultDao()
-    }
+
 
 //    @Provides
 //    fun provideSudokuGameDao(db: AppDatabase): SudokuGameDao = db.sudokuGameDao()

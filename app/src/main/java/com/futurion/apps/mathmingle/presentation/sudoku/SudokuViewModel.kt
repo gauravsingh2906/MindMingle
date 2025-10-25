@@ -6,8 +6,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.futurion.apps.mathmingle.data.local.dao.SudokuResultDao
-import com.futurion.apps.mathmingle.data.local.entity.SudokuResultEntity
 import com.futurion.apps.mathmingle.domain.model.Cell
 import com.futurion.apps.mathmingle.domain.model.Difficulty
 import com.futurion.apps.mathmingle.domain.repository.PuzzleGenerator
@@ -47,7 +45,6 @@ import kotlin.to
 @HiltViewModel
 class SudokuViewModel @Inject constructor(
     private val generator: PuzzleGenerator,
-    private val dao: SudokuResultDao,
     savedStateHandle: SavedStateHandle// No longer DefaultPuzzleGenerator directly
 ) : ViewModel() {
 
@@ -132,7 +129,6 @@ class SudokuViewModel @Inject constructor(
                     _bestStreak.value = _bestStreak.value
                     viewModelScope.launch {
                         delay(500) // Let UI update mistake before showing dialog
-                        saveSudokuResult()
                         _event.emit(SudokuGameEvent.GameOver)
                     }
                     return
@@ -152,7 +148,6 @@ class SudokuViewModel @Inject constructor(
                         _bestStreak.value = _currentStreak.value
                     }
                     viewModelScope.launch {
-                        saveSudokuResult()
                         _event.emit(SudokuGameEvent.PuzzleSolved)
                     }
                 }
@@ -219,7 +214,6 @@ class SudokuViewModel @Inject constructor(
 
 
                     viewModelScope.launch {
-                        saveSudokuResult()
                         _event.emit(SudokuGameEvent.PuzzleSolved)
                     }
 
@@ -293,28 +287,7 @@ class SudokuViewModel @Inject constructor(
     }
 
 
-    private suspend fun saveSudokuResult() {
-        val currentState = _state.value
 
-        val puzzleString =
-            currentState.originalBoard.flatten().joinToString("") { it.value.toString() }
-        val userSolutionString =
-            currentState.board.flatten().joinToString("") { it.value.toString() }
-
-        val result = SudokuResultEntity(
-            difficulty = difficulty.name,
-            puzzle = puzzleString,
-            userSolution = userSolutionString,
-            hintsUsed = currentState.hintsUsed,
-            mistakesMade = currentState.mistakes,
-            timeTakenSeconds = currentState.elapsedTime,
-            xpEarned = currentState.xpEarned,
-        )
-
-        _state.value.elapsedTime = currentState.elapsedTime
-
-        dao.insertResult(result)
-    }
 
 
     fun generatePuzzle(difficulty: Difficulty) {

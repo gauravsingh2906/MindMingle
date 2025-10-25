@@ -1,7 +1,6 @@
 package com.futurion.apps.mathmingle
 
 import android.app.Application
-import com.facebook.ads.AudienceNetworkAds
 import com.google.android.gms.ads.MobileAds
 import com.google.android.gms.ads.RequestConfiguration
 import dagger.hilt.android.HiltAndroidApp
@@ -16,6 +15,5 @@ class MyApplication: Application() {
             .setTestDeviceIds(testDeviceIds)
             .build()
         MobileAds.setRequestConfiguration(configuration)
-        AudienceNetworkAds.initialize(this)
     }
 }

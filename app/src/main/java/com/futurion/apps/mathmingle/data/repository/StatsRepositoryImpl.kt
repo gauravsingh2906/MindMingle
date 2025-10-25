@@ -8,6 +8,8 @@ import com.futurion.apps.mathmingle.data.local.entity.OverallProfileEntity
 import com.futurion.apps.mathmingle.data.local.entity.PerGameStatsEntity
 import com.futurion.apps.mathmingle.domain.repository.StatsRepository
 import com.futurion.apps.mathmingle.presentation.games.SampleGames.Default
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.channelFlow
 import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -245,6 +247,13 @@ class StatsRepositoryImpl @Inject constructor(
         overallProfileDao.insertProfile(newOverall)
     }
 
+    override fun getPerGameStatsFlow(
+        userId: String,
+        gameName: String
+    ): Flow<PerGameStatsEntity?> {
+        return perGameStatsDao.getStatsForGameFlow(userId, gameName)
+    }
+
 
     override suspend fun initUserIfNeeded(username: String?): String {
         val existing = overallProfileDao.getAnyUser()
@@ -262,15 +271,7 @@ class StatsRepositoryImpl @Inject constructor(
 
         val username = "${adjectives.random()}${nouns.random()}_$number"
 
-        var defaultAvatarId = listOf<Int>(
-            R.drawable.avatar_1,
-            R.drawable.avatar_4,
-            R.drawable.avatar_2,
-            R.drawable.avatar_5,
-            R.drawable.avatar_6,
-            R.drawable.avatar_7,
-        )
-        val defaultUnlockedAvatars = defaultAvatarId.random()
+
         val defaultAvatar = R.drawable.avatar_1
 
 
@@ -328,6 +329,8 @@ class StatsRepositoryImpl @Inject constructor(
 
     override suspend fun getProfile(userId: String) = overallProfileDao.getProfile(userId)
 
+    override suspend fun getProfileFlow(userId: String): Flow<OverallProfileEntity?>  = overallProfileDao.getProfileFlow(userId)
+
 
     override suspend fun updateProfile(profile: OverallProfileEntity) {
         overallProfileDao.updateProfile(profile)
@@ -335,6 +338,18 @@ class StatsRepositoryImpl @Inject constructor(
 
     override suspend fun getPerGameStats(userId: String, gameName: String) =
         perGameStatsDao.getStatsForGame(userId, gameName)
+
+    override suspend fun getAllGameStatsFlow(
+        userId: String,
+        gameName: String
+    ): Flow<OverallProfileEntity> = channelFlow {
+
+        perGameStatsDao.getStatsForGameFlow(userId, gameName).collect {
+            val profile = overallProfileDao.getProfile(userId) ?: return@collect
+            send(profile)
+        }
+
+    }
 
     override suspend fun updateMathMemoryCurrentLevel(userId: String, level: Int) {
         val profile = overallProfileDao.getProfile(userId) ?: return

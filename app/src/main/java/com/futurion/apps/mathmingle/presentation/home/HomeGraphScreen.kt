@@ -142,8 +142,8 @@ fun HomeGraphScreen(
                             ) {
                                 IconButton(
                                     onClick = {
-                                        viewModel.loadProfile(profile.userId)
                                         navController.navigate(Screen.Games)
+                                        viewModel.loadProfile(profile.userId)
                                     }
                                 ) {
                                     Icon(
@@ -313,7 +313,7 @@ fun HomeGraphScreen(
                             val activity = context as Activity
 
                             val statsViewModel: StatsViewModel = hiltViewModel()
-                            val profile by statsViewModel.profile.collectAsStateWithLifecycle() // Use Flow/LiveData/State
+                            val profile by statsViewModel.profile1.collectAsStateWithLifecycle() // Use Flow/LiveData/State
                             val perGameStats by statsViewModel.perGameStats.collectAsStateWithLifecycle()
 
                             val userId = statsViewModel.userId.collectAsStateWithLifecycle().value

@@ -9,15 +9,13 @@ import com.futurion.apps.mathmingle.data.converters.StringListConverter
 import com.futurion.apps.mathmingle.data.local.dao.LevelProgressDao
 import com.futurion.apps.mathmingle.data.local.dao.OverallProfileDao
 import com.futurion.apps.mathmingle.data.local.dao.PerGameStatsDao
-import com.futurion.apps.mathmingle.data.local.dao.SudokuResultDao
 import com.futurion.apps.mathmingle.data.local.entity.LevelProgressEntity
 import com.futurion.apps.mathmingle.data.local.entity.OverallProfileEntity
 import com.futurion.apps.mathmingle.data.local.entity.PerGameStatsEntity
-import com.futurion.apps.mathmingle.data.local.entity.SudokuResultEntity
 
 @Database(
-    entities = [OverallProfileEntity::class, PerGameStatsEntity::class, LevelProgressEntity::class,SudokuResultEntity::class],
-    version = 3,
+    entities = [OverallProfileEntity::class, PerGameStatsEntity::class, LevelProgressEntity::class],
+    version = 1,
     exportSchema = false
 )
 @TypeConverters(IntListConverter::class, StringListConverter::class, Converters::class)
@@ -29,7 +27,7 @@ abstract class AppDatabase : RoomDatabase() {
 
     abstract fun levelProgressDao(): LevelProgressDao
 
-    abstract fun sudokuResultDao(): SudokuResultDao
+
 
  //   abstract fun dailyMissionDao(): DailyMissionDao
 
