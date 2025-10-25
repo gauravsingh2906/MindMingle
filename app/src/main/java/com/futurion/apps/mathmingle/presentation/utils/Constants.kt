@@ -10,6 +10,8 @@ object Constants {
 
     val AD_Unit = "ca-app-pub-3940256099942544/5224354917"
 
+
+
 }
 
 fun isInternetAvailable(context: Context): Boolean {

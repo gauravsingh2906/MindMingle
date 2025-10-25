@@ -5,7 +5,7 @@ import android.util.Log
 import androidx.annotation.RequiresApi
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.futurion.apps.mindmingle.R
+import com.futurion.apps.mathmingle.R
 import com.futurion.apps.mathmingle.data.local.entity.OverallProfileEntity
 import com.futurion.apps.mathmingle.data.local.entity.PerGameStatsEntity
 import com.futurion.apps.mathmingle.domain.mapping.mapToGameStats
